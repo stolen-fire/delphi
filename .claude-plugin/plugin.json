@@ -1,0 +1,5 @@
+{
+  "name": "deliberate",
+  "version": "0.1.0",
+  "description": "Structured multi-agent deliberation with adversarial review, docket provenance, and configurable compositions"
+}
