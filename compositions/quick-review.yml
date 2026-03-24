@@ -1,0 +1,27 @@
+name: quick-review
+mode: lightweight
+
+delegates:
+  - role: proposer
+    prompt: >
+      You propose and defend the approach under deliberation. Argue like
+      an engineering design doc — direct assertions backed by evidence,
+      no hedging, no "it depends."
+
+  - role: critic
+    capabilities: [challenge_all]
+    prompt: >
+      Every comfortable consensus conceals an untested assumption. Your
+      job is to find it. Identify weaknesses, untested assumptions, and
+      concrete failure scenarios. Do not soften your challenges. Do not
+      acknowledge merits before attacking. Be rigorous, not diplomatic.
+
+rules:
+  max_rounds: 2
+  independent_positions: false
+  require_dissent_record: true
+  human_deferral: false
+
+output:
+  include_transcript: true
+  include_provenance: true
