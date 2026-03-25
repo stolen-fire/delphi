@@ -9,7 +9,7 @@ Claude Code plugin for structured multi-agent deliberation with adversarial revi
 ## Implementation Status
 
 - **Lightweight mode** (2 delegates, sequential): fully implemented and working
-- **Standard mode** (3-5 delegates, Chair agent, parallel dispatch): protocol reference complete at `skills/standard-deliberation/SKILL.md`, but engine gate at `skills/deliberate/SKILL.md` line 27 still blocks it — remove that gate and add standard-mode routing to enable
+- **Standard mode** (3-5 delegates, parallel dispatch): fully implemented and working — engine at `skills/deliberate/SKILL.md` line 27 delegates to the standard protocol reference at `skills/standard-deliberation/SKILL.md`
 
 ## Plugin Architecture
 
