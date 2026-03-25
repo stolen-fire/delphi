@@ -9,7 +9,7 @@ Claude Code plugin for structured multi-agent deliberation with adversarial revi
 ## Implementation Status
 
 - **Lightweight mode** (2 delegates, sequential): fully implemented and working
-- **Standard mode** (3-5 delegates, parallel dispatch): fully implemented and working — engine at `skills/deliberate/SKILL.md` line 27 delegates to the standard protocol reference at `skills/standard-deliberation/SKILL.md`
+- **Standard mode** (3-5 delegates, parallel dispatch): fully implemented and working — engine at `skills/delphi/SKILL.md` line 27 delegates to the standard protocol reference at `skills/standard-deliberation/SKILL.md`
 
 ## Plugin Architecture
 
@@ -24,6 +24,6 @@ Claude Code plugin for structured multi-agent deliberation with adversarial revi
 ## Conventions
 
 - Commits: conventional format (`feat: Phase N — description`)
-- Branch: `main` (remote: `stolen-fire/deliberate`)
+- Branch: `main` (remote: `stolen-fire/delphi`)
 - Agent frontmatter: `model: inherit`, explicit `tools` list, `color` field
 - Skill/command frontmatter: `name`, `description` required

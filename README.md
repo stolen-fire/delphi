@@ -1,22 +1,24 @@
-# deliberate
+# delphi
 
 **Structured multi-agent deliberation for Claude Code.**
 
-When you ask an AI a design question, you get one opinion. `deliberate` gives you a structured adversarial process: one agent proposes, another attacks, the proposer must defend with evidence or concede. The result is a decision document with full provenance — not a single-pass answer, but a stress-tested recommendation you can actually trust.
+When you ask an AI a design question, you get one opinion. `delphi` gives you a structured adversarial process: one agent proposes, another attacks, the proposer must defend with evidence or concede. The result is a decision document with full provenance — not a single-pass answer, but a stress-tested recommendation you can actually trust.
 
 ```
-/deliberate "Should we use event sourcing or CRUD for the order pipeline?"
+/delphi "Should we use event sourcing or CRUD for the order pipeline?"
 ```
 
 That's it. Two agents argue. Challenges must be addressed with citations or concessions. You get a ratified decision with a provenance table showing exactly which claims survived scrutiny and which didn't.
 
 ---
 
-## Why this exists
+## Concept
 
-Solo AI conversations have a well-documented failure mode: **evaluator leniency**. When the same model generates and evaluates, it tends to agree with itself. Uncomfortable truths get softened. Edge cases get hand-waved. You get confident answers that haven't been tested.
+Delphi is a lightweight implementation of the [Democracy of AI](https://stolenfire.dev/posts/democracy-of-ai-deliberative-consensus) — a deliberative consensus framework that applies parliamentary institutional design to AI decision-making. Where single-model generation produces decisions filtered through one analytical framework, structured adversarial deliberation forces assumptions into the open, challenges comfortable consensus, and produces decisions with full provenance.
 
-`deliberate` solves this architecturally. The critic agent's mandate is `challenge_all` — it cannot acknowledge merits before attacking. The proposer must respond to every challenge with an explicit action tag (`DEFEND`, `CONCEDE`, or `DISSENT`), and defenses require citations. The engine categorizes outcomes by checking for structural markers, not by evaluating argument quality. There is no room for politeness to override rigor.
+The pattern has roots in the Delphi method (RAND, 1950s) and structured analytic techniques from the intelligence community, but extends them with formal convergence rules, documented dissent, human deferral, and adversarial challenge as a structural requirement rather than an optional practice.
+
+Solo AI conversations have a well-documented failure mode: **evaluator leniency**. When the same model generates and evaluates, it tends to agree with itself. Uncomfortable truths get softened. Edge cases get hand-waved. `delphi` solves this architecturally — the critic's mandate is `challenge_all`, defenses require citations, and the engine categorizes outcomes by structural markers, not argument quality. There is no room for politeness to override rigor.
 
 ---
 
@@ -55,14 +57,14 @@ Every claim traces back to who said it, who challenged it, and how it was resolv
 ### From the marketplace
 
 ```bash
-claude plugin add stolen-fire/deliberate
+claude plugin add stolen-fire/delphi
 ```
 
 ### From a local clone
 
 ```bash
-git clone https://github.com/stolen-fire/deliberate.git
-claude --plugin-dir ./deliberate
+git clone https://github.com/stolen-fire/delphi.git
+claude --plugin-dir ./delphi
 ```
 
 No dependencies. No build step. The plugin is pure markdown and YAML — Claude Code's subagent system handles all execution.
@@ -76,7 +78,7 @@ No dependencies. No build step. The plugin is pure markdown and YAML — Claude 
 Ask any design question inline:
 
 ```
-/deliberate "Should we use Redis or Postgres for session storage?"
+/delphi "Should we use Redis or Postgres for session storage?"
 ```
 
 This runs **lightweight mode**: a proposer and a critic, up to 2 rounds, with a decision or forced outcome at the end.
@@ -86,7 +88,7 @@ This runs **lightweight mode**: a proposer and a critic, up to 2 rounds, with a 
 Define your own deliberation roster in YAML:
 
 ```
-/deliberate --config compositions/integration-review.yml --input api-spec.md
+/delphi --config compositions/integration-review.yml --input api-spec.md
 ```
 
 Compositions let you configure delegates, capabilities, round limits, and rules like veto power or human deferral.
@@ -96,14 +98,14 @@ Compositions let you configure delegates, capabilities, round limits, and rules 
 Preview the deliberation setup without executing:
 
 ```
-/deliberate --dry-run --config compositions/integration-review.yml
+/delphi --dry-run --config compositions/integration-review.yml
 ```
 
 ---
 
 ## Two modes
 
-### Lightweight (available now)
+### Lightweight
 
 Two delegates — proposer and critic — in a sequential adversarial exchange. The engine handles framing and synthesis directly. Fast, focused, good for most design decisions.
 
@@ -111,7 +113,7 @@ Two delegates — proposer and critic — in a sequential adversarial exchange. 
 - Up to 2 rounds
 - Engine writes the decision directly
 
-### Standard (coming soon)
+### Standard
 
 Multiple delegates with independent positions, a Chair agent for procedural facilitation, veto mechanics, and human deferral for genuinely undecidable questions.
 
@@ -187,6 +189,14 @@ Write your own compositions for your domain. Define the roles, assign capabiliti
 
 ---
 
+## When to use it
+
+Architecture decisions are the obvious use case, but deliberation applies anywhere you'd want a second opinion before committing: **debugging** (force adversarial hypothesis testing instead of confirmation bias), **pre-merge review** (is the approach sound, not just the code), **incident post-mortems**, **migration strategy**, **dependency decisions**, **RFC review**, and more.
+
+See **[docs/use-cases.md](docs/use-cases.md)** for the full range of scenarios with example commands.
+
+---
+
 ## Design choices
 
 **Structural markers over subjective judgment.** The engine never evaluates whether an argument is "good." It checks: did the defense include a citation? Was an action tag present? This makes synthesis deterministic and auditable.
@@ -201,8 +211,8 @@ Write your own compositions for your domain. Define the roles, assign capabiliti
 
 ## Background & further reading
 
+- [The Democracy of AI](https://stolenfire.dev/posts/democracy-of-ai-deliberative-consensus) — The conceptual framework behind this plugin. Parliamentary institutional design applied to AI decision-making.
 - [Harness design for long-running application development](https://www.anthropic.com/engineering/harness-design-long-running-apps) — Anthropic's empirical findings on multi-agent harness design. Their generator/evaluator separation and file-based communication patterns informed this plugin's architecture.
-- [The Democracy of AI: Deliberative Consensus Across Heterogeneous Language Models](https://stolenfire.dev/posts/democracy-of-ai-deliberative-consensus) — The conceptual framework for applying parliamentary deliberation to AI decision-making, which this plugin implements in lightweight form.
 
 ---
 

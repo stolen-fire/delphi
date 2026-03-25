@@ -4,7 +4,7 @@ allowed-tools: Agent, Read, Write, Bash, Glob, Grep
 argument-hint: '"question" | --config path.yml --input file.md [--dry-run]'
 ---
 
-# /deliberate
+# /delphi
 
 Run a structured adversarial deliberation on a question or artifact.
 
@@ -33,20 +33,20 @@ If `$ARGUMENTS` contains `--dry-run`:
 **No arguments:**
 If `$ARGUMENTS` is empty, display usage help:
 ```
-/deliberate — Structured multi-agent deliberation
+/delphi — Structured multi-agent deliberation
 
 Usage:
-  /deliberate "Should we use event sourcing or CRUD?"     Quick 2-delegate review
-  /deliberate --config comp.yml --input api.md            Custom composition
-  /deliberate --config comp.yml --input a.md b.md c.md    Multiple artifacts
-  /deliberate --dry-run --config comp.yml                 Preview without executing
+  /delphi "Should we use event sourcing or CRUD?"     Quick 2-delegate review
+  /delphi --config comp.yml --input api.md            Custom composition
+  /delphi --config comp.yml --input a.md b.md c.md    Multiple artifacts
+  /delphi --dry-run --config comp.yml                 Preview without executing
 
 Docket output: .deliberation/dockets/{timestamp}-{name}/
 ```
 
 ## Execute
 
-Read and follow the deliberation engine skill at `@${CLAUDE_PLUGIN_ROOT}/skills/deliberate/SKILL.md`.
+Read and follow the deliberation engine skill at `@${CLAUDE_PLUGIN_ROOT}/skills/delphi/SKILL.md`.
 
 Pass to the engine:
 - **question:** the inline text or "deliberate on the provided input artifacts"

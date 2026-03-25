@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-24
 **Status:** Draft
-**Scope:** Implement standard deliberation mode in the engine skill (`skills/deliberate/SKILL.md`)
+**Scope:** Implement standard deliberation mode in the engine skill (`skills/delphi/SKILL.md`)
 
 ## Summary
 
@@ -18,7 +18,7 @@ Enable standard deliberation mode (3-5 delegates + Chair, parallel position disp
 
 ### Extend the existing routing
 
-Line 27 of `skills/deliberate/SKILL.md` already routes to the standard protocol reference when `mode: standard`. This routing must be preserved and extended with concrete dispatch logic for each phase below. The current instruction ("read the standard-deliberation protocol for dispatch rules") is correct but insufficient — the engine needs inline dispatch logic, not just a pointer to the protocol reference.
+Line 27 of `skills/delphi/SKILL.md` already routes to the standard protocol reference when `mode: standard`. This routing must be preserved and extended with concrete dispatch logic for each phase below. The current instruction ("read the standard-deliberation protocol for dispatch rules") is correct but insufficient — the engine needs inline dispatch logic, not just a pointer to the protocol reference.
 
 ### Parse delegate roster (standard mode)
 
@@ -245,7 +245,7 @@ Decision document identifies vetoed points, vetoing delegate, cited invariant, a
 
 | File                                       | Change                                               |
 | ------------------------------------------ | ---------------------------------------------------- |
-| `skills/deliberate/SKILL.md`               | Remove gate, add standard-mode routing at each phase |
+| `skills/delphi/SKILL.md`               | Remove gate, add standard-mode routing at each phase |
 | `skills/standard-deliberation/SKILL.md`    | No changes (protocol reference, already complete)    |
 | `skills/lightweight-deliberation/SKILL.md` | No changes                                           |
 | `agents/deliberation-chair.md`             | No changes (already defined)                         |
@@ -254,7 +254,7 @@ Decision document identifies vetoed points, vetoing delegate, cited invariant, a
 | `templates/*.md`                           | No changes (already support standard mode fields)    |
 | `compositions/integration-review.yml`      | No changes (already a valid standard composition)    |
 
-**Two files change:** `skills/deliberate/SKILL.md` (engine) and `agents/deliberation-critic.md` (CONFLICT marker).
+**Two files change:** `skills/delphi/SKILL.md` (engine) and `agents/deliberation-critic.md` (CONFLICT marker).
 
 ---
 

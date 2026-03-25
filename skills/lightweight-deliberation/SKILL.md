@@ -2,7 +2,7 @@
 name: lightweight-deliberation
 description: >
   Lightweight deliberation protocol reference. 2 delegates (proposer + critic),
-  sequential dispatch, no Chair subagent. Used by the main deliberate engine
+  sequential dispatch, no Chair subagent. Used by the main delphi engine
   when mode is lightweight or when invoked inline.
 ---
 

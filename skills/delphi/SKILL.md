@@ -1,9 +1,9 @@
 ---
-name: deliberate
+name: delphi
 description: >
   Main deliberation engine. Orchestrates structured multi-agent deliberation
   by dispatching delegate subagents, managing docket files, and performing
-  synthesis. Use when the /deliberate command is invoked or when another skill
+  synthesis. Use when the /delphi command is invoked or when another skill
   needs adversarial evaluation of an artifact.
 ---
 
@@ -444,7 +444,7 @@ delegates to take a clear position for or against. Identify the specific
 tension that makes this decision non-obvious.
 
 ## The question
-{user's question or "deliberate on the provided input artifacts"}
+{user's question or "delphi on the provided input artifacts"}
 
 ## Input artifacts
 {contents of each input artifact file}
