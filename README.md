@@ -16,7 +16,7 @@ That's it. Two agents argue. Challenges must be addressed with citations or conc
 
 Delphi is a lightweight implementation of the [Democracy of AI](https://stolenfire.dev/posts/democracy-of-ai-deliberative-consensus) — a deliberative consensus framework that applies parliamentary institutional design to AI decision-making. Where single-model generation produces decisions filtered through one analytical framework, structured adversarial deliberation forces assumptions into the open, challenges comfortable consensus, and produces decisions with full provenance.
 
-The pattern has roots in the Delphi method (RAND, 1950s) and structured analytic techniques from the intelligence community, but extends them with formal convergence rules, documented dissent, human deferral, and adversarial challenge as a structural requirement rather than an optional practice.
+The pattern has roots in the [Delphi method (RAND, 1950s)](docs/delphi-lineage.md) and structured analytic techniques from the intelligence community, but extends them with formal convergence rules, documented dissent, human deferral, and adversarial challenge as a structural requirement rather than an optional practice.
 
 Solo AI conversations have a well-documented failure mode: **evaluator leniency**. When the same model generates and evaluates, it tends to agree with itself. Uncomfortable truths get softened. Edge cases get hand-waved. `delphi` solves this architecturally — the critic's mandate is `challenge_all`, defenses require citations, and the engine categorizes outcomes by structural markers, not argument quality. There is no room for politeness to override rigor.
 
