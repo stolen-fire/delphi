@@ -52,8 +52,17 @@ Every claim traces back to who said it, who challenged it, and how it was resolv
 
 ## Installation
 
+### From the marketplace
+
 ```bash
 claude plugin add stolen-fire/deliberate
+```
+
+### From a local clone
+
+```bash
+git clone https://github.com/stolen-fire/deliberate.git
+claude --plugin-dir ./deliberate
 ```
 
 No dependencies. No build step. The plugin is pure markdown and YAML — Claude Code's subagent system handles all execution.
@@ -193,7 +202,7 @@ Write your own compositions for your domain. Define the roles, assign capabiliti
 ## Background & further reading
 
 - [Harness design for long-running application development](https://www.anthropic.com/engineering/harness-design-long-running-apps) — Anthropic's empirical findings on multi-agent harness design. Their generator/evaluator separation and file-based communication patterns informed this plugin's architecture.
-- *The Democracy of AI: Deliberative Consensus Across Heterogeneous Language Models* — The conceptual framework for applying parliamentary deliberation to AI decision-making, which this plugin implements in lightweight form.
+- [The Democracy of AI: Deliberative Consensus Across Heterogeneous Language Models](https://stolenfire.dev/posts/democracy-of-ai-deliberative-consensus) — The conceptual framework for applying parliamentary deliberation to AI decision-making, which this plugin implements in lightweight form.
 
 ---
 
