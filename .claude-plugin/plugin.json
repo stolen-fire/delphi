@@ -1,5 +1,12 @@
 {
   "name": "deliberate",
   "version": "0.1.0",
-  "description": "Structured multi-agent deliberation with adversarial review, docket provenance, and configurable compositions"
+  "description": "Structured multi-agent deliberation with adversarial review, docket provenance, and configurable compositions",
+  "author": {
+    "name": "stolen-fire"
+  },
+  "repository": "https://github.com/stolen-fire/deliberate",
+  "homepage": "https://github.com/stolen-fire/deliberate",
+  "license": "MIT",
+  "keywords": ["deliberation", "adversarial-review", "multi-agent", "decision-making", "code-review"]
 }

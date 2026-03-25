@@ -1,0 +1,15 @@
+{
+  "name": "deliberate",
+  "owner": {
+    "name": "stolen-fire"
+  },
+  "plugins": [
+    {
+      "name": "deliberate",
+      "version": "0.1.0",
+      "source": "./",
+      "description": "Structured multi-agent deliberation with adversarial review, docket provenance, and configurable compositions",
+      "keywords": ["deliberation", "adversarial-review", "multi-agent", "decision-making", "code-review"]
+    }
+  ]
+}

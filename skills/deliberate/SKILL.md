@@ -24,7 +24,7 @@ When invoked, you receive either:
 - If you received an inline question with no `--config`: use the **hardcoded lightweight composition** defined in the lightweight-deliberation protocol reference at `${CLAUDE_PLUGIN_ROOT}/skills/lightweight-deliberation/SKILL.md`
 - If you received a `--config` path: read the YAML file, extract `mode:` field (lightweight or standard)
 
-For Phase 1 of this plugin, only **lightweight mode** is implemented. If the composition specifies `mode: standard`, inform the user that standard mode is not yet available.
+If the composition specifies `mode: standard`, read the standard-deliberation protocol at `${CLAUDE_PLUGIN_ROOT}/skills/standard-deliberation/SKILL.md` for dispatch rules (parallel positions, Chair subagent for proposition framing and decision writing, anti-anchoring, veto mechanics). The phases below still apply but dispatch patterns differ per the standard protocol.
 
 ### Step 0.2: Create docket directory
 
