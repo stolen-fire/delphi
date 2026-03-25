@@ -1,6 +1,6 @@
 {
   "name": "deliberate",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Structured multi-agent deliberation with adversarial review, docket provenance, and configurable compositions",
   "author": {
     "name": "stolen-fire"
