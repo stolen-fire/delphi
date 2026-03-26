@@ -450,6 +450,12 @@ You are the Chair. Frame the proposition for deliberation.
 ## Quality register
 {Chair's prompt_register from composition YAML}
 
+## Tone
+{tone voice directive content, if tone was loaded — omit this entire section if no tone}
+
+### Tone examples
+{tone examples content, if tone was loaded — omit this entire section if no tone}
+
 ## Your task
 Restate the following question as a decidable proposition — one that forces
 delegates to take a clear position for or against. Identify the specific
@@ -503,6 +509,12 @@ You are the {role_name} in this deliberation.
 ## Quality register
 {delegate's prompt_register — this is how your output should read}
 
+## Tone
+{tone voice directive content, if tone was loaded — omit this entire section if no tone}
+
+### Tone examples
+{tone examples content, if tone was loaded — omit this entire section if no tone}
+
 ## Grounding material
 {contents of grounding file if specified, otherwise "none provided"}
 
@@ -551,6 +563,12 @@ every position.
 
 ## Quality register
 {delegate's prompt_register}
+
+## Tone
+{tone voice directive content, if tone was loaded — omit this entire section if no tone}
+
+### Tone examples
+{tone examples content, if tone was loaded — omit this entire section if no tone}
 
 ## Proposition
 {contents of proposition.md}
@@ -621,6 +639,12 @@ You are the {role_name}. You are responding to adversarial challenges.
 
 ## Quality register
 {delegate's prompt_register}
+
+## Tone
+{tone voice directive content, if tone was loaded — omit this entire section if no tone}
+
+### Tone examples
+{tone examples content, if tone was loaded — omit this entire section if no tone}
 
 ## Your original position
 {contents of positions/round-{N}/{role_name}.md}
@@ -712,6 +736,12 @@ You are the Chair. Write the ratified decision document.
 
 ## Quality register
 {Chair's prompt_register}
+
+## Tone
+{tone voice directive content, if tone was loaded — omit this entire section if no tone}
+
+### Tone examples
+{tone examples content, if tone was loaded — omit this entire section if no tone}
 
 ## Your task
 Read all deliberation materials and write decision.md — the authoritative
