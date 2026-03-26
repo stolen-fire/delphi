@@ -101,6 +101,16 @@ Preview the deliberation setup without executing:
 /delphi --dry-run --config compositions/integration-review.yml
 ```
 
+### Build a custom composition
+
+Create a tailored deliberation panel through a guided interview:
+
+```
+/delphi-compose
+```
+
+The command asks about your decision, what's at risk, and any context files — then proposes a panel of delegates, generates the composition YAML, and optionally runs the deliberation immediately.
+
 ---
 
 ## Two modes
