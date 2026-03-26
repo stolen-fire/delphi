@@ -136,3 +136,243 @@ Any position content that was NOT targeted by a challenge gets grouped into a se
 4. Settled with DEFEND + CITE (resolved but interesting)
 5. Settled with CONCEDE (cleanly resolved)
 6. Settled Without Challenge (least dramatic)
+
+## Generate the observatory HTML
+
+Build a single HTML page (as a fragment — the visualizer wraps it in its themed frame). The page has four zones.
+
+### Color constants
+
+Use these CSS custom properties throughout the HTML. Define them in a `<style>` block at the top of the fragment:
+
+```html
+<style>
+  :root {
+    --color-proposer: #4a90d9;
+    --color-critic: #d94a4a;
+    --color-chair: #4ad9c0;
+    --color-defend: #4a90d9;
+    --color-concede: #d9a84a;
+    --color-dissent: #d97a4a;
+    --color-veto: #d94a4a;
+    --color-settled: #4a9;
+    --color-contested: #d9a84a;
+    --color-pulse-bg: #1a1a2e;
+    --color-thread-bg: #12121a;
+    --color-aside-bg: #1a1a28;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #e0e0e0; line-height: 1.5; }
+
+  .observatory { max-width: 900px; margin: 0 auto; padding: 20px; }
+
+  /* --- Header Bar --- */
+  .header { margin-bottom: 24px; }
+  .header h1 { font-size: 1.3em; font-weight: 600; margin-bottom: 8px; color: #fff; }
+  .header .meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 600; }
+  .badge-mode { background: #2a2a3e; color: #a0a0c0; }
+  .badge-outcome-ratified, .badge-outcome-ratified_with_dissent { background: #1a3a2a; color: #4a9; }
+  .badge-outcome-forced { background: #3a3a1a; color: #d9a84a; }
+  .badge-outcome-deferred, .badge-outcome-vetoed { background: #3a1a1a; color: #d94a4a; }
+  .badge-outcome-unknown { background: #2a2a3e; color: #a0a0c0; }
+  .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #4a9; display: inline-block; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .timestamp { font-size: 0.8em; color: #888; }
+
+  /* --- Deliberation Pulse --- */
+  .pulse-card { background: var(--color-pulse-bg); border: 1px solid #2a2a3e; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; }
+  .pulse-card h2 { font-size: 1em; color: #a0a0c0; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .pulse-card h2::before { content: '📡'; }
+  .pulse-card .commentary { font-size: 0.95em; color: #c0c0d0; }
+
+  /* --- Issue Threads --- */
+  .threads { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+  .thread { background: var(--color-thread-bg); border: 1px solid #2a2a3e; border-radius: 8px; overflow: hidden; }
+  .thread-header { padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .thread-header:hover { background: #1a1a24; }
+  .thread-title { font-weight: 600; font-size: 0.95em; }
+  .thread-badges { display: flex; gap: 6px; align-items: center; }
+  .thread-body { padding: 0 16px 16px 16px; display: none; }
+  .thread.open .thread-body { display: block; }
+  .thread-toggle { color: #666; font-size: 0.8em; transition: transform 0.2s; }
+  .thread.open .thread-toggle { transform: rotate(90deg); }
+
+  /* Timeline entries within a thread */
+  .entry { border-left: 3px solid #2a2a3e; margin-left: 8px; padding: 10px 16px; margin-bottom: 8px; }
+  .entry-position { border-left-color: var(--color-proposer); }
+  .entry-challenge { border-left-color: var(--color-critic); background: rgba(217, 74, 74, 0.05); }
+  .entry-response { border-left-color: var(--color-defend); }
+  .entry-response.concede { border-left-color: var(--color-concede); }
+  .entry-response.dissent { border-left-color: var(--color-dissent); }
+  .entry-response.veto { border-left-color: var(--color-veto); }
+  .entry-label { font-size: 0.75em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .entry-content { font-size: 0.9em; color: #c0c0d0; }
+  .entry-content blockquote { border-left: 2px solid #3a3a4e; padding-left: 10px; margin: 6px 0; color: #a0a0b0; font-style: italic; }
+  .action-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 700; text-transform: uppercase; }
+  .action-DEFEND { background: rgba(74, 144, 217, 0.2); color: var(--color-defend); }
+  .action-CONCEDE { background: rgba(217, 168, 74, 0.2); color: var(--color-concede); }
+  .action-DISSENT { background: rgba(217, 122, 74, 0.2); color: var(--color-dissent); }
+  .action-VETO { background: rgba(217, 74, 74, 0.2); color: var(--color-veto); }
+
+  /* Per-thread commentary aside */
+  .aside { background: var(--color-aside-bg); border-radius: 6px; padding: 10px 14px; margin-top: 8px; font-size: 0.85em; color: #a0a0c0; border-left: 3px solid #3a3a5e; }
+  .aside::before { content: '💬 Commentary'; display: block; font-size: 0.75em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #7070a0; margin-bottom: 4px; }
+
+  /* Settled without challenge section */
+  .unchallenged { background: var(--color-thread-bg); border: 1px solid #2a2a3e; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+  .unchallenged h3 { font-size: 0.9em; color: #7070a0; margin-bottom: 8px; }
+  .unchallenged li { font-size: 0.85em; color: #a0a0b0; margin-bottom: 4px; }
+
+  /* --- Timeline Breadcrumb --- */
+  .breadcrumb { display: flex; justify-content: center; gap: 4px; align-items: center; padding: 12px; background: #12121a; border: 1px solid #2a2a3e; border-radius: 8px; }
+  .bc-phase { padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 500; cursor: pointer; }
+  .bc-phase.done { background: #1a3a2a; color: #4a9; }
+  .bc-phase.active { background: #2a2a4e; color: #a0a0ff; animation: pulse 1.5s infinite; }
+  .bc-phase.pending { background: #1a1a22; color: #555; }
+  .bc-arrow { color: #333; font-size: 0.7em; }
+</style>
+```
+
+### Zone 1 — Header Bar
+
+Generate the header bar HTML:
+
+```html
+<div class="observatory">
+  <div class="header">
+    <h1>{proposition text — first sentence or full short title}</h1>
+    <div class="meta">
+      <span class="badge badge-mode">{MODE}</span>
+      <span class="badge badge-mode">{delegate count} delegates</span>
+      <span class="badge badge-mode">{round count} round(s)</span>
+      <span class="badge badge-outcome-{outcome}">{OUTCOME or 'In Progress'}</span>
+      {if LIVE_MODE: <span class="live-dot"></span><span class="timestamp">Live</span>}
+      {if not LIVE_MODE: <span class="timestamp">{formatted date from docket.json}</span>}
+    </div>
+  </div>
+```
+
+Replace all `{...}` placeholders with actual values from the parsed docket metadata. If a value is not yet available (live mode, early stages), use sensible defaults: outcome = "In Progress", round count = number of round directories found so far.
+
+### Zone 2 — Deliberation Pulse
+
+Generate the commentary card. The commentary content is YOUR analysis — write it inline as you build the HTML.
+
+```html
+  <div class="pulse-card">
+    <h2>Deliberation Pulse</h2>
+    <div class="commentary">
+      {YOUR COMMENTARY HERE — see the Commentary section below for voice guidance}
+    </div>
+  </div>
+```
+
+### Zone 3 — Issue Threads
+
+For each thread (sorted by drama as defined in "Build issue threads"):
+
+```html
+  <div class="threads">
+
+    <div class="thread open"> <!-- first thread starts open, rest closed -->
+      <div class="thread-header" onclick="this.parentElement.classList.toggle('open')">
+        <span class="thread-title">{Issue name}</span>
+        <span class="thread-badges">
+          <span class="badge badge-outcome-{resolution_class}">{Resolution}</span>
+          <span style="color: var(--color-proposer); font-size: 0.8em;">{target_delegate}</span>
+          <span class="thread-toggle">▶</span>
+        </span>
+      </div>
+      <div class="thread-body">
+
+        <!-- Position excerpt -->
+        <div class="entry entry-position">
+          <div class="entry-label" style="color: var(--color-proposer);">{role_name} — Position</div>
+          <div class="entry-content">
+            <blockquote>{Position statement excerpt}</blockquote>
+            {Relevant reasoning excerpt that relates to this specific challenge}
+          </div>
+        </div>
+
+        <!-- Challenge -->
+        <div class="entry entry-challenge">
+          <div class="entry-label" style="color: var(--color-critic);">{critic_role} — {Challenge type}</div>
+          <div class="entry-content">{Challenge text}</div>
+        </div>
+
+        <!-- Response (if available) -->
+        <div class="entry entry-response {action_lowercase}">
+          <div class="entry-label">
+            {role_name} — Response <span class="action-badge action-{ACTION}">{ACTION}</span>
+          </div>
+          <div class="entry-content">{Response text. Include [CITE:] references inline if present.}</div>
+        </div>
+
+        <!-- Round 2+ entries follow the same pattern if they exist -->
+
+        <!-- Per-thread commentary (only on notable threads) -->
+        <div class="aside">{Thread-specific commentary — only include if this thread has something interesting}</div>
+
+      </div>
+    </div>
+
+    <!-- Repeat for each thread -->
+
+  </div>
+```
+
+For threads where response or synthesis data is not yet available (live mode), omit those entries and show a subtle "Awaiting response..." placeholder in muted text.
+
+**Unchallenged positions** (if any):
+
+```html
+  <div class="unchallenged">
+    <h3>Settled Without Challenge</h3>
+    <ul>
+      <li><strong>{role_name}</strong>: {position statement}</li>
+      <!-- repeat -->
+    </ul>
+  </div>
+```
+
+### Zone 4 — Timeline Breadcrumb
+
+Determine which phases have completed based on which files exist:
+
+```html
+  <div class="breadcrumb">
+    <span class="bc-phase {done|active|pending}">Proposition</span>
+    <span class="bc-arrow">→</span>
+    <span class="bc-phase {done|active|pending}">Positions ({N})</span>
+    <span class="bc-arrow">→</span>
+    <span class="bc-phase {done|active|pending}">Challenges</span>
+    <span class="bc-arrow">→</span>
+    <span class="bc-phase {done|active|pending}">Responses</span>
+    <span class="bc-arrow">→</span>
+    <span class="bc-phase {done|active|pending}">Synthesis</span>
+    <span class="bc-arrow">→</span>
+    <span class="bc-phase {done|active|pending}">Decision</span>
+  </div>
+
+</div> <!-- end .observatory -->
+```
+
+Phase state logic:
+- A phase is `done` if its files exist in the docket
+- A phase is `active` if it is the first phase whose files do NOT yet exist (live mode only; in post-hoc mode, all existing phases are `done` and missing phases are `pending`)
+- A phase is `pending` if it comes after the active phase
+
+### Collapsible thread JavaScript
+
+Add a small script at the end of the HTML fragment for thread toggle behavior:
+
+```html
+<script>
+  // First thread starts open; clicking any header toggles its thread
+  document.querySelectorAll('.thread-header').forEach(h => {
+    h.addEventListener('click', () => h.parentElement.classList.toggle('open'));
+  });
+</script>
+```
