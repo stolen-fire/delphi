@@ -24,6 +24,7 @@ When invoked, you receive either:
 - If you received an inline question with no `--config`: use the **hardcoded lightweight composition** defined in the lightweight-deliberation protocol reference at `${CLAUDE_PLUGIN_ROOT}/skills/lightweight-deliberation/SKILL.md`. Proceed to **Lightweight Protocol** below.
 - If you received a `--config` path: read the YAML file, extract `mode:` field
   - If `mode: lightweight` (or 2 delegates): proceed to **Lightweight Protocol** below
+  - If the composition contains a `tone` field, load the tone file using the resolution precedence described in Standard Phase 0 > Tone loading. The loaded tone is injected into all lightweight dispatch prompts.
   - If `mode: standard` (or 3+ delegates): proceed to **Standard Protocol** below
 
 ### Step 0.2: Create docket directory
@@ -77,6 +78,12 @@ You are the Proposer in this deliberation.
 You propose and defend the approach under deliberation. Argue like an
 engineering design doc — direct assertions backed by evidence, no hedging.
 
+## Tone
+{tone voice directive content, if tone was loaded — omit this entire section if no tone}
+
+### Tone examples
+{tone examples content, if tone was loaded — omit this entire section if no tone}
+
 ## Proposition
 {contents of proposition.md}
 
@@ -116,6 +123,12 @@ Assemble the critic's dispatch prompt:
 
 ```
 You are the Critic in this deliberation. Your capability is challenge_all.
+
+## Tone
+{tone voice directive content, if tone was loaded — omit this entire section if no tone}
+
+### Tone examples
+{tone examples content, if tone was loaded — omit this entire section if no tone}
 
 ## Proposition
 {contents of proposition.md}
@@ -158,6 +171,12 @@ Read `{docket-path}/challenges/round-1.md`. Extract the section under `## Challe
 
 ```
 You are the Proposer. You are responding to adversarial challenges.
+
+## Tone
+{tone voice directive content, if tone was loaded — omit this entire section if no tone}
+
+### Tone examples
+{tone examples content, if tone was loaded — omit this entire section if no tone}
 
 ## Your original position
 {contents of positions/round-1/proposer.md}
