@@ -1,4 +1,4 @@
-# delphi
+# Delphi
 
 **Structured multi-agent deliberation for Claude Code.**
 
