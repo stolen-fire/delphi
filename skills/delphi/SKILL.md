@@ -420,6 +420,18 @@ For each delegate role in the composition:
 - At least one delegate must have `challenge_all` capability
 - If `veto_roles` is set, those roles must exist in the delegate list
 
+### Tone loading
+
+If the composition YAML contains a `tone` field:
+
+1. Read the `tone` value (e.g., `snarky`)
+2. Attempt to read `.claude/delphi/tones/{tone}.md` — if found, use it
+3. Otherwise, attempt to read `${CLAUDE_PLUGIN_ROOT}/tones/{tone}.md` — if found, use it
+4. If neither exists: output a warning (`Warning: tone '{tone}' not found, proceeding without tone`) and set tone content to empty — do not fail the deliberation
+5. If found: extract the `## Voice directive` section content and the `## Examples` section content from the file body — these are the tone injection payloads used in all subsequent dispatch phases
+
+If the composition YAML does not contain a `tone` field, skip tone loading entirely. No tone will be injected into dispatch prompts.
+
 ---
 
 ## Standard Phase 1: Chair proposition framing
