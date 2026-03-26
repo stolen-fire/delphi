@@ -199,6 +199,58 @@ Write your own compositions for your domain. Define the roles, assign capabiliti
 
 ---
 
+## Tones
+
+Tones control how delegates *say* things without changing *what* they argue. Add `tone:` to any composition to change the deliberation voice:
+
+```yaml
+name: my-review
+mode: standard
+tone: parliamentary
+
+delegates:
+  # ...
+```
+
+### Built-in tones
+
+| Tone | Voice |
+| ------ | ------- |
+| `snarky` | Chesterton meets on-call engineer. Sharp truths grounded in consequences — "This is who gets paged at 3 AM." |
+| `diplomatic` | Steel-man before you critique. Measured precision, professional warmth, no hedging. |
+| `adversarial` | Courtroom cross-examination. No pleasantries. Every claim is guilty until proven innocent. |
+| `socratic` | Questions that corner you into your own answer. Never states what it can ask. |
+| `parliamentary` | Monty Python's Holy Grail as British Parliament. The honourable members deliberate with coconut-based migration analogies and increasing procedural desperation. |
+
+`/delphi-compose` offers tone selection during the guided interview. Or set it directly in YAML.
+
+### Custom tones
+
+Drop a markdown file in your project at `.claude/delphi/tones/{name}.md`:
+
+```markdown
+---
+name: pirate
+description: Arr, every design decision be a voyage into uncharted waters
+---
+
+## Voice directive
+
+{Instructions for how delegates should write}
+
+## Examples
+
+### Before (neutral)
+> {Neutral deliberation output}
+
+### After (pirate)
+> {Same content in pirate voice}
+```
+
+Your custom tone appears automatically in `/delphi-compose` and is available via `tone: pirate` in any composition.
+
+---
+
 ## When to use it
 
 Architecture decisions are the obvious use case, but deliberation applies anywhere you'd want a second opinion before committing: **debugging** (force adversarial hypothesis testing instead of confirmation bias), **pre-merge review** (is the approach sound, not just the code), **incident post-mortems**, **migration strategy**, **dependency decisions**, **RFC review**, and more.
