@@ -435,3 +435,51 @@ Examples:
 Write like a knowledgeable commentator who respects the process. Not sycophantic, not snarky. Direct, specific, occasionally wry. Think sports commentary for intellectuals — you're explaining what happened and why it matters, not cheerleading.
 
 Do NOT use phrases like "fascinating", "impressive", "excellent point". Describe what happened and what it means. Let the reader judge quality.
+
+## Launch and push
+
+### Step 1 — Launch a visualizer session
+
+Call `mcp__plugin_visualizer_visualizer__launch_session` to start a browser session. Store the returned `session_id`.
+
+Tell the user: "Observatory launched — opening browser at {url}"
+
+### Step 2 — First render
+
+Execute the full pipeline:
+1. Read the docket (§ Read the docket)
+2. Build issue threads (§ Build issue threads)
+3. Generate commentary (§ Generate commentary)
+4. Assemble the HTML (§ Generate the observatory HTML)
+5. Push the HTML via `mcp__plugin_visualizer_visualizer__push_screen` with:
+   - `session_id`: the session ID from Step 1
+   - `html`: the assembled HTML fragment
+   - `title`: "Observatory: {proposition short title}"
+
+### Step 3 — Live mode polling (skip if post-hoc)
+
+If `LIVE_MODE` is true, enter a polling loop:
+
+1. Record the set of files currently in the docket directory (use `Glob` with pattern `{DOCKET_PATH}/**/*.md` and `{DOCKET_PATH}/**/*.json`)
+2. Wait approximately 5 seconds (use `Bash` with `sleep 5`)
+3. Re-scan the docket directory with the same Glob pattern
+4. Compare the file lists. If new files have appeared or the file count has changed:
+   a. Re-read the docket
+   b. Re-build issue threads
+   c. Re-generate commentary (the commentary should EVOLVE — don't repeat yourself)
+   d. Re-assemble the HTML
+   e. Push the updated HTML via `push_screen`
+5. Check for completion: if `{DOCKET_PATH}/decision.md` or `{DOCKET_PATH}/deferral.md` now exists:
+   a. Do one final push with full analysis commentary
+   b. Tell the user: "Deliberation complete — {outcome}. Observatory showing final state."
+   c. Exit the polling loop (do NOT close the session — leave it open for browsing)
+6. If no completion, repeat from step 2
+
+**Polling limits:** After 60 polling cycles (approximately 5 minutes) with no new files, tell the user: "No changes detected for 5 minutes. The deliberation may have stalled. You can re-run `/delphi-observe --live` to resume watching." Then exit the loop.
+
+### Step 4 — Post-hoc completion
+
+If `LIVE_MODE` is false:
+- After the first render push, tell the user: "Observatory rendered — browse the deliberation in the browser tab."
+- Do NOT close the session. Leave it open for the user to browse.
+- The command is complete.
