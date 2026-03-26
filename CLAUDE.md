@@ -11,6 +11,7 @@ Claude Code plugin for structured multi-agent deliberation with adversarial revi
 - **Lightweight mode** (2 delegates, sequential): fully implemented and working
 - **Standard mode** (3-5 delegates, parallel dispatch): fully implemented and working — engine at `skills/delphi/SKILL.md` line 27 delegates to the standard protocol reference at `skills/standard-deliberation/SKILL.md`
 - **Tone system**: 5 built-in tones (snarky, diplomatic, adversarial, socratic, parliamentary), user-extensible via `.claude/delphi/tones/`
+- **Observatory** (`/delphi-observe`): browser-based viewer for deliberation dockets — issue-threaded layout with AI commentary, supports live and post-hoc modes via visualizer MCP
 
 ## Plugin Architecture
 
