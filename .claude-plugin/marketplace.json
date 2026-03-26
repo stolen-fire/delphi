@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "delphi",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "source": "./",
       "description": "Structured multi-agent deliberation with adversarial review, docket provenance, and configurable compositions",
       "keywords": ["deliberation", "adversarial-review", "multi-agent", "decision-making", "code-review"]
