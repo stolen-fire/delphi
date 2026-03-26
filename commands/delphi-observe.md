@@ -366,13 +366,33 @@ Phase state logic:
 
 ### Collapsible thread JavaScript
 
-Add a small script at the end of the HTML fragment for thread toggle behavior:
+Add a small script at the end of the HTML fragment for thread toggle and breadcrumb scroll behavior:
 
 ```html
 <script>
   // First thread starts open; clicking any header toggles its thread
   document.querySelectorAll('.thread-header').forEach(h => {
     h.addEventListener('click', () => h.parentElement.classList.toggle('open'));
+  });
+
+  // Breadcrumb phase click scrolls to the first thread with content from that phase
+  document.querySelectorAll('.bc-phase').forEach(phase => {
+    phase.addEventListener('click', () => {
+      const label = phase.textContent.trim().replace(/\s*\(\d+\)/, '').toLowerCase();
+      const targets = {
+        'proposition': '.header',
+        'positions': '.entry-position',
+        'challenges': '.entry-challenge',
+        'responses': '.entry-response',
+        'synthesis': '.thread .badge',
+        'decision': '.pulse-card'
+      };
+      const sel = targets[label];
+      if (sel) {
+        const el = document.querySelector(sel);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
   });
 </script>
 ```
