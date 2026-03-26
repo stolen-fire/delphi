@@ -308,6 +308,7 @@ Write a JSON file to `{docket-path}/docket.json` with this structure:
   "created": "{ISO 8601 timestamp}",
   "composition": "{composition name}",
   "mode": "lightweight",
+  "tone": "{tone name from composition YAML, or omit this field if no tone was set}",
   "proposition_summary": "{first sentence of proposition.md}",
   "input_artifacts": ["{list of input file paths}"],
   "delegates": [
@@ -809,6 +810,7 @@ Assemble `docket.json` with:
   "created": "{ISO 8601 timestamp}",
   "composition": "{composition name from YAML}",
   "mode": "standard",
+  "tone": "{tone name from composition YAML, or omit this field if no tone was set}",
   "proposition_summary": "{first sentence of proposition.md}",
   "input_artifacts": ["{list of input file paths}"],
   "delegates": [
