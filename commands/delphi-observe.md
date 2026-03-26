@@ -376,3 +376,62 @@ Add a small script at the end of the HTML fragment for thread toggle behavior:
   });
 </script>
 ```
+
+## Generate commentary
+
+You are the commentator. As you build the HTML, you generate commentary that helps the user understand the deliberation. You have three voices — mix them based on what's interesting.
+
+### Voice 1 — Play-by-play
+
+Narrate the most interesting exchange. Be specific — name the delegates, quote key phrases, highlight surprising moves.
+
+Examples:
+- "The critic targeted the architect's claim that eventual consistency is acceptable — but the architect defended with a direct citation to the CAP theorem discussion in the grounding document."
+- "A surprising concession: the security reviewer agreed that the auth middleware is over-engineered, abandoning their original position entirely."
+
+### Voice 2 — Strategic
+
+Read the overall trajectory. What does the current state of markers suggest about where this deliberation is heading?
+
+Examples:
+- "Two of three contested points lack citations. If the architect can't ground these in round 2, this deliberation is heading toward deferral."
+- "Clean sweep — every challenge was defended with citations. This is heading toward a confident ratification."
+- "The veto on data model changes means the original architecture proposal is effectively dead. The remaining threads are negotiating the fallback."
+
+### Voice 3 — Educational
+
+When the deliberation method itself is illuminating, explain it. Don't force this — only use it when there's something genuinely interesting to point out.
+
+Examples:
+- "This is where anti-anchoring pays off — notice how the frontend advocate and the domain architect arrived at the same conclusion about API boundaries independently, without seeing each other's positions."
+- "The 'failure scenario' challenge type is doing heavy lifting here — it forced the proposer to address a concrete production scenario rather than arguing in the abstract."
+- "A dissent record means the delegate accepted the majority position but went on record with their concern. This is by design — it preserves the minority viewpoint for future reference."
+
+### Placement rules
+
+**Deliberation Pulse** (Zone 2 card):
+- 2-3 sentences combining strategic + educational voices
+- In live mode: adapt to the current phase:
+  - Positions only: anticipatory — what are the key tensions between positions?
+  - After challenges: analytical — which challenges seem strongest?
+  - After responses: predictive — based on action markers, what's the likely outcome?
+  - After synthesis: summative — what was the verdict and why?
+  - After decision: reflective — what was most surprising or noteworthy?
+- In post-hoc mode: write with full hindsight. Reference the outcome. Highlight the most consequential exchange.
+
+**Per-thread asides** (inside thread bodies):
+- 1-2 sentences of play-by-play, only on notable threads
+- A thread is "notable" if any of these are true:
+  - It contains a VETO
+  - It contains a CONCEDE (someone changed their mind)
+  - It contains a DEFEND without a CITE (unsupported defense — drama)
+  - It contains a DISSENT
+  - The challenge type is "Failure scenario" and the response is particularly strong or weak
+- Threads that are straightforward DEFEND + CITE settlements do NOT get commentary — they resolved cleanly and don't need narration
+- Never add commentary to every thread. Silence is a signal that things went as expected.
+
+### Tone
+
+Write like a knowledgeable commentator who respects the process. Not sycophantic, not snarky. Direct, specific, occasionally wry. Think sports commentary for intellectuals — you're explaining what happened and why it matters, not cheerleading.
+
+Do NOT use phrases like "fascinating", "impressive", "excellent point". Describe what happened and what it means. Let the reader judge quality.
