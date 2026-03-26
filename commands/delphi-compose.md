@@ -145,6 +145,29 @@ Use `AskUserQuestion` to get approval. If the user wants changes:
 
 ---
 
+## Step 4b — Tone selection
+
+Discover available tones by scanning both directories:
+
+1. Use `Glob` to find `${CLAUDE_PLUGIN_ROOT}/tones/*.md` (plugin built-in tones)
+2. Use `Glob` to find `.claude/delphi/tones/*.md` (user-defined tones)
+3. For each discovered file, read the YAML frontmatter to extract `name` and `description`
+4. Deduplicate by name — if a user-defined tone has the same name as a built-in, the user-defined version wins
+
+Present the available tones using `AskUserQuestion`:
+
+> Would you like to set a tone for this deliberation?
+>
+> Available tones:
+> {for each tone: **{name}** — {description}}
+>
+> Or "none" for default deliberation style.
+
+- If the user selects a tone: store the slug for inclusion in the YAML output (Step 6)
+- If the user says "none", "skip", or similar: no tone field will be written
+
+---
+
 ## Step 5 — Rules
 
 Based on the decision context and stakes, propose deliberation rules:
@@ -188,6 +211,7 @@ Use `AskUserQuestion` to get approval. Apply any adjustments the user requests.
 ```yaml
 name: {slugified-name}
 mode: standard
+tone: {tone slug from Step 4b, or omit this line entirely if "none" was selected}
 
 delegates:
   - role: chair
@@ -260,3 +284,4 @@ These must ALWAYS hold for any generated composition:
 6. The composition file is written to the user's project, not the plugin directory
 7. `independent_positions` is always `true`
 8. `require_dissent_record` is always `true`
+9. If `tone` is set, the tone file must exist in either `${CLAUDE_PLUGIN_ROOT}/tones/` or `.claude/delphi/tones/`
