@@ -83,6 +83,12 @@ Ask any design question inline:
 
 This runs **lightweight mode**: a proposer and a critic, up to 2 rounds, with a decision or forced outcome at the end.
 
+Add `--tone` to any invocation for a different voice:
+
+```
+/delphi --tone snarky "Should we use Redis or Postgres for session storage?"
+```
+
 ### Custom composition
 
 Define your own deliberation roster in YAML:

@@ -21,10 +21,11 @@ When invoked, you receive either:
 
 ### Step 0.1: Determine mode
 
-- If you received an inline question with no `--config`: use the **hardcoded lightweight composition** defined in the lightweight-deliberation protocol reference at `${CLAUDE_PLUGIN_ROOT}/skills/lightweight-deliberation/SKILL.md`. Proceed to **Lightweight Protocol** below.
+- If you received an inline question with no `--config`: use the **hardcoded lightweight composition** defined in the lightweight-deliberation protocol reference at `${CLAUDE_PLUGIN_ROOT}/skills/lightweight-deliberation/SKILL.md`. If a `--tone` flag was provided, load the tone file using the resolution precedence described in Standard Phase 0 > Tone loading. The loaded tone is injected into all lightweight dispatch prompts. Proceed to **Lightweight Protocol** below.
 - If you received a `--config` path: read the YAML file, extract `mode:` field
+  - If a `--tone` flag was provided, it overrides any `tone` field in the composition YAML
   - If `mode: lightweight` (or 2 delegates): proceed to **Lightweight Protocol** below
-  - If the composition contains a `tone` field, load the tone file using the resolution precedence described in Standard Phase 0 > Tone loading. The loaded tone is injected into all lightweight dispatch prompts.
+  - If a tone is set (from `--tone` flag or composition YAML), load the tone file using the resolution precedence described in Standard Phase 0 > Tone loading. The loaded tone is injected into all lightweight dispatch prompts.
   - If `mode: standard` (or 3+ delegates): proceed to **Standard Protocol** below
 
 ### Step 0.2: Create docket directory
@@ -442,15 +443,17 @@ For each delegate role in the composition:
 
 ### Tone loading
 
-If the composition YAML contains a `tone` field:
+Determine the active tone: if a `--tone` flag was provided, use it (CLI overrides YAML). Otherwise, use the composition YAML's `tone` field if present.
 
-1. Read the `tone` value (e.g., `snarky`)
+If an active tone is set:
+
+1. Read the tone slug (e.g., `snarky`)
 2. Attempt to read `.claude/delphi/tones/{tone}.md` — if found, use it
 3. Otherwise, attempt to read `${CLAUDE_PLUGIN_ROOT}/tones/{tone}.md` — if found, use it
 4. If neither exists: output a warning (`Warning: tone '{tone}' not found, proceeding without tone`) and set tone content to empty — do not fail the deliberation
 5. If found: extract the `## Voice directive` section content and the `## Examples` section content from the file body — these are the tone injection payloads used in all subsequent dispatch phases
 
-If the composition YAML does not contain a `tone` field, skip tone loading entirely. No tone will be injected into dispatch prompts.
+If no tone is set (no `--tone` flag and no `tone` field in YAML), skip tone loading entirely. No tone will be injected into dispatch prompts.
 
 ---
 
