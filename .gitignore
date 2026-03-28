@@ -1,6 +1,9 @@
 # Deliberation output dockets
 .deliberation/
 
+# Visualizer runtime artifacts
+.visualizer/
+
 # OS
 .DS_Store
 Thumbs.db
