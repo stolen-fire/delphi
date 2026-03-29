@@ -52,6 +52,18 @@ Every claim traces back to who said it, who challenged it, and how it was resolv
 
 ---
 
+## Reading the output
+
+![Deliberation document flow](docs/deliberation-flow.png)
+
+**The adversarial handoff.** Documents flow between three actors. The proposer writes a position with evidence. The critic attacks it — weakest claim, untested assumption, concrete failure scenario. The proposer must respond to every challenge with exactly one action: defend (with a citation), concede, or record dissent.
+
+**The round loop.** After each exchange, the engine categorizes outcomes by structural markers — not argument quality. A defense without a citation is "contested" regardless of how persuasive it sounds. If contested points remain and rounds are left, the scope narrows and another round begins. Settled points are locked and never revisited.
+
+**Tracing a decision.** Every row in the provenance table in `decision.md` maps back through this chain: who proposed it, who challenged it, and how it was resolved. The docket directory is the permanent record — the conversation output is just the summary.
+
+---
+
 ## Installation
 
 ### From the marketplace
