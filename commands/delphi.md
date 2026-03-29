@@ -23,6 +23,7 @@ If `$ARGUMENTS` is a quoted string or plain text without `--config`:
 If `$ARGUMENTS` contains `--config`:
 - Extract the path after `--config` — this is the composition YAML file
 - If `$ARGUMENTS` also contains `--input`, extract all paths after `--input` — these are input artifact files
+- If `$ARGUMENTS` also contains `--evidence`, extract the path after `--evidence` — this is the evidence directory or file list (overrides YAML `evidence:` field)
 - If `$ARGUMENTS` also contains `--tone`, extract the tone name — this overrides any `tone` field in the composition YAML
 - Read the YAML to determine the mode (lightweight or standard)
 
@@ -42,6 +43,7 @@ Usage:
   /delphi --tone snarky "Should we use a monorepo?"   Quick review with tone
   /delphi --config comp.yml --input api.md            Custom composition
   /delphi --config comp.yml --input a.md b.md c.md    Multiple artifacts
+  /delphi --config comp.yml --evidence ./docs/        Submit evidence directory
   /delphi --config comp.yml --tone parliamentary      Override composition tone
   /delphi --dry-run --config comp.yml                 Preview without executing
 
@@ -56,6 +58,7 @@ Pass to the engine:
 - **question:** the inline text or "deliberate on the provided input artifacts"
 - **composition:** the parsed YAML (or null for inline — engine uses hardcoded defaults)
 - **input_artifacts:** list of file paths from `--input` (or empty)
+- **evidence:** the evidence directory/file path from `--evidence` flag (or null — engine checks YAML `evidence:` field as fallback)
 - **tone:** the tone name from `--tone` flag (or null — engine checks YAML `tone` field as fallback)
 - **dry_run:** true/false
 

@@ -79,6 +79,44 @@ The Chair is dispatched as a subagent for exactly two tasks:
 
 The Chair is NOT dispatched during position, challenge, or response phases. Those are delegate tasks. The Chair is NOT dispatched for synthesis — that is engine logic.
 
+## Research authority protocol
+
+Delegates with `research_authority` capability have access to Scout tools for external research.
+
+### Pre-deliberation window (primary)
+- Dispatched after Chair proposition framing, before position statements
+- Produces a shared case law appendix at `{docket-path}/appendix/case-law.md`
+- Appendix includes verified authority AND verified absences (searches with no results)
+- Available to all delegates in subsequent phases
+
+### Response-phase recovery window (secondary)
+- Triggered only when a research_authority delegate CONCEDES a cited case under challenge
+- Scoped to ONE research call to find replacement authority for the conceded citation
+- Result appended to case law appendix as a timestamped addendum
+- If no replacement found, verified absence recorded
+
+### Anchoring mitigation
+- The appendix is produced by a delegate who also has `challenge_all` — adversarial delegates structurally challenge the research
+- Anchoring risk is lower in adversarial systems than consensus-seeking ones
+
+## Source verification protocol
+
+Delegates with `verify_sources` capability have access to Scout tools and the evidence directory for factual verification during challenge and response phases.
+
+### Timing
+- Available during Phase 3 (challenge) and Phase 4 (response) — not during position statements
+- Verification is on-demand: the auditor decides what to check based on what claims seem uncertain or contested
+
+### Verification log
+- Each verification is recorded with timestamp, claim, source, result, and provenance
+- Results: confirmed (claim holds), refuted (claim fails), inconclusive (couldn't determine), not checked (no verification attempted)
+- The engine appends a coverage summary during synthesis
+
+### Effect on deliberation
+- A confirmed claim strengthens the defense — no conditional hedging needed
+- A refuted claim becomes a formal input to synthesis — the Chair and engine can assess its impact
+- Not-checked claims are disclosed in the coverage map — epistemic honesty about verification depth
+
 ## Anti-anchoring enforcement
 
 Each delegate's dispatch package for the position phase includes ONLY:

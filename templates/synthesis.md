@@ -4,11 +4,12 @@
 
 Points where all challenges were addressed with evidence, conceded, or accepted with dissent.
 
-| Point | Defender | Action | Evidence |
-|-------|----------|--------|----------|
-| {description} | {role} | DEFEND | [CITE: ...] present |
-| {description} | {role} | CONCEDE | Position updated |
-| {description} | {role} | DISSENT | Concern recorded |
+| Point | Defender | Action | Evidence | Citation quality |
+|-------|----------|--------|----------|-----------------|
+| {description} | {role} | DEFEND | [CITE: ...] present | Independent |
+| {description} | {role} | DEFEND | [CITE: ...] present | ⚠ Self-referential |
+| {description} | {role} | CONCEDE | Position updated | — |
+| {description} | {role} | DISSENT | Concern recorded | — |
 
 ## Contested points
 

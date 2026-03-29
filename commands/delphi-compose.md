@@ -83,6 +83,19 @@ If the user provides paths:
 
 If the user says "skip", "none", or similar, proceed with no grounding files.
 
+### Evidence submission
+
+Use `AskUserQuestion` to ask:
+
+> Do you have a directory of source documents (PDFs, court filings, reports) that delegates should be able to verify claims against? If so, provide the path. Otherwise, type "none".
+
+If the user provides a path:
+- Verify the path exists using Glob
+- Note it as the evidence field for the YAML output
+- Explain: "Evidence files will be converted to searchable text and made available to all delegates. An evidence index with conversion provenance will be generated."
+
+If "none", omit the evidence field from the YAML.
+
 ---
 
 ## Step 4 — Propose the panel
@@ -103,6 +116,12 @@ Map the risk dimensions identified in Step 2 to delegate archetypes:
 | Maintenance burden, tech debt, complexity | Pragmatist / devil's advocate | `challenge_all` |
 | Compliance, legal, regulatory | Compliance reviewer | `veto_invariant_violations` |
 | Cost overrun, resource waste | Resource economist | *(none)* |
+
+**New capabilities (assign based on panel needs):**
+- `research_authority` — Pre-deliberation research via Scout. Assign to domain specialists who need to verify legal precedent, technical standards, or regulatory requirements. Produces a shared appendix.
+- `verify_sources` — Mid-deliberation factual verification via Scout + Read. Assign to auditor/reviewer roles responsible for evidence integrity. Records a verification log.
+
+These capabilities are independent of `challenge_all` and `veto_invariant_violations`. A delegate can have multiple capabilities (e.g., a law specialist with both `challenge_all` and `research_authority`).
 
 ### Always-include rules
 
@@ -212,6 +231,7 @@ Use `AskUserQuestion` to get approval. Apply any adjustments the user requests.
 name: {slugified-name}
 mode: standard
 tone: {tone slug from Step 4b, or omit this line entirely if "none" was selected}
+evidence: {path from evidence question, or omit if none}
 
 delegates:
   - role: chair

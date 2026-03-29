@@ -44,6 +44,73 @@ Create the full directory structure using Bash `mkdir -p`:
   synthesis/
 ```
 
+### Step 0.2b: Evidence preprocessing
+
+If an evidence path was provided (via `--evidence` flag or YAML `evidence:` field — flag overrides YAML):
+
+1. Create the evidence directory: `mkdir -p {docket-path}/evidence/`
+
+2. Determine the evidence source:
+   - If the path is a directory: process all files in it recursively
+   - If the path is a file list (comma-separated or space-separated): process each file
+
+3. For EACH source file, determine conversion method and convert:
+
+   **PDF files (.pdf):**
+   ```bash
+   # First attempt: extract embedded text (born-digital)
+   pdftotext "{source_file}" "{docket-path}/evidence/{basename}.txt"
+
+   # Check if extraction produced meaningful content
+   # If output file is empty or nearly empty (< 100 bytes per page), fall back to OCR:
+   tesseract "{source_file}" "{docket-path}/evidence/{basename}" -l eng txt
+   ```
+
+   For multi-hundred-page PDFs (like scanned KORA compilations), process page-by-page:
+   ```bash
+   # Extract page count
+   pdfinfo "{source_file}" | grep Pages
+
+   # For each page range, attempt pdftotext first, tesseract as fallback
+   # Record per-page conversion method and confidence
+   ```
+
+   **Word documents (.docx, .doc):**
+   ```bash
+   python3 -c "
+   from docx import Document
+   doc = Document('{source_file}')
+   with open('{docket-path}/evidence/{basename}.txt', 'w') as f:
+       for para in doc.paragraphs:
+           f.write(para.text + '\n')
+   "
+   ```
+
+   **Text files (.txt, .md, .csv, .json, .yml, .yaml):**
+   Copy directly to evidence directory — no conversion needed.
+
+   **Unsupported formats:**
+   Log a warning: `  ⚠ Skipping {filename} — unsupported format ({extension})`
+
+4. Compute SHA-256 hash for each source file:
+   ```bash
+   sha256sum "{source_file}"
+   ```
+
+5. Write the evidence index using the template at `${CLAUDE_PLUGIN_ROOT}/templates/evidence-index.md`:
+   - Fill in the files table with per-file provenance (method, confidence, notes)
+   - Fill in the hash manifest
+   - Write to `{docket-path}/evidence/INDEX.md`
+
+6. Record evidence metadata for docket.json (will be written at finalization):
+   - `"evidence_source"`: the original path (CLI flag or YAML field)
+   - `"evidence_source_type"`: "cli_flag" or "yaml_field"
+   - `"evidence_files"`: array of {filename, sha256, method, confidence}
+
+Output progress: `  Evidence: {N} files processed ({born-digital} born-digital, {ocr} OCR, {failed} failed)`
+
+If no evidence path was provided, skip this entire section.
+
 ### Step 0.3: Write proposition
 
 - **Lightweight inline:** Write the user's question directly to `proposition.md` in the docket directory. Frame it as a decidable question — if the user's input is vague, sharpen it into a specific proposition.
@@ -52,6 +119,129 @@ Create the full directory structure using Bash `mkdir -p`:
 Store the full docket path in a variable — every subsequent file write uses this base path.
 
 ---
+
+## Dispatch safety rule
+
+After EVERY subagent dispatch: wait for completion, then verify the expected output file exists at its target path. If the file is missing, check the subagent's response text and write it to the correct path. Do not proceed to the next phase until all expected files from the current phase are confirmed.
+
+## Challenge-response categorization rules
+
+Both lightweight and standard synthesis use this same table. Be case-insensitive when checking markers. Accept whitespace variations.
+
+| Markers found | Category |
+|--------------|----------|
+| `[ACTION: DEFEND]` with `[CITE:]` referencing input artifacts, grounding material, evidence directory, or case law appendix | **Settled** |
+| `[ACTION: DEFEND]` with `[CITE:]` referencing ONLY the delegate's own position file or other deliberation documents (proposition, other positions) | **Settled (self-referential citation)** — flag in synthesis |
+| `[ACTION: DEFEND]` without any `[CITE:]` marker | **Contested** (unsupported) |
+| `[ACTION: CONCEDE]` | **Settled** (position updated) |
+| `[ACTION: DISSENT]` | **Settled with dissent** |
+| `[ACTION: VETO]` with `[CITE:]` | **Vetoed** |
+| No `[ACTION:]` tag | **Contested** (unaddressed) |
+
+**Citation validation:** A citation to the delegate's own position file (e.g., `[CITE: positions/round-1/prosecuting_analyst.md, ...]`) or to the proposition (e.g., `[CITE: proposition.md, ...]`) is self-referential — it adds no independent evidence. These defenses are still classified as Settled (the engine does not override the delegate's judgment), but they are flagged in the synthesis table so the Chair and human readers can assess citation quality.
+
+## Tone injection pattern
+
+When a tone is loaded, inject this block into every dispatch prompt (all phases, both protocols). When no tone is loaded, omit entirely — do not include empty headers.
+
+```
+## Tone
+{tone voice directive content}
+
+### Tone examples
+{tone examples content}
+```
+
+All dispatch templates below use the shorthand **[TONE BLOCK]** to indicate where this block goes.
+
+## Docket.json schema
+
+Both protocols write `{docket-path}/docket.json` using this structure. Populate fields from the composition YAML (standard) or hardcoded defaults (lightweight).
+
+```json
+{
+  "id": "{docket-name}",
+  "created": "{ISO 8601 timestamp}",
+  "composition": "{composition name}",
+  "mode": "{lightweight|standard}",
+  "tone": "{tone name, or omit field if no tone}",
+  "proposition_summary": "{first sentence of proposition.md}",
+  "input_artifacts": ["{list of input file paths}"],
+  "evidence": {
+    "source": "{evidence path from CLI flag or YAML field}",
+    "source_type": "{cli_flag | yaml_field | none}",
+    "files": [
+      {
+        "filename": "{original filename}",
+        "sha256": "{hash}",
+        "method": "{born-digital | tesseract-ocr | direct-copy | failed}",
+        "confidence": "{high | medium | low}"
+      }
+    ]
+  },
+  "appendix": {
+    "present": "{true | false}",
+    "researcher": "{role_name}",
+    "verified_cases": "{count}",
+    "verified_absences": "{count}",
+    "addenda": "{count}"
+  },
+  "verification": {
+    "present": "{true | false}",
+    "auditor": "{role_name}",
+    "claims_total": "{N}",
+    "claims_verified": "{M}",
+    "confirmed": "{count}",
+    "refuted": "{count}",
+    "inconclusive": "{count}",
+    "not_checked": "{N-M}"
+  },
+  "delegates": [
+    {
+      "role": "{role}",
+      "prompt_register": "{prompt_register}",
+      "grounding": "{grounding path or null}",
+      "capabilities": ["{capabilities}"]
+    }
+  ],
+  "rules": {
+    "max_rounds": "{number}",
+    "independent_positions": "{false for lightweight, true for standard}",
+    "require_dissent_record": "{boolean}",
+    "human_deferral": "{boolean}",
+    "veto_roles": ["{standard only — omit for lightweight}"]
+  },
+  "rounds": [
+    {
+      "round": "{N}",
+      "positions_filed": "{count}",
+      "challenges_filed": "{count}",
+      "responses_filed": "{count}",
+      "synthesis_status": "{settled|contested|vetoed}",
+      "contested_points": ["{list}"],
+      "parallel_dispatches": ["{standard only — omit for lightweight}"]
+    }
+  ],
+  "outcome": "{ratified|ratified_with_dissent|forced|deferred|vetoed}",
+  "dissent": {
+    "present": "{true|false}",
+    "delegate": "{role if present}",
+    "concern": "{concern text if present}"
+  },
+  "provenance": [
+    {
+      "decision": "{key decision}",
+      "proposed_by": "{role}",
+      "challenged_by": "{role}",
+      "challenge": "{challenge text}",
+      "resolved_by": "{role or consensus}",
+      "resolution": "{how resolved}"
+    }
+  ]
+}
+```
+
+**Omission rule:** If evidence was not provided, appendix was not produced, or verification was not performed, omit the corresponding top-level field entirely from the JSON. Do not set it to `null` or include an empty stub.
 
 ---
 
@@ -79,17 +269,17 @@ You are the Proposer in this deliberation.
 You propose and defend the approach under deliberation. Argue like an
 engineering design doc — direct assertions backed by evidence, no hedging.
 
-## Tone
-{tone voice directive content, if tone was loaded — omit this entire section if no tone}
-
-### Tone examples
-{tone examples content, if tone was loaded — omit this entire section if no tone}
+[TONE BLOCK]
 
 ## Proposition
 {contents of proposition.md}
 
 ## Input artifacts
 {contents of each input artifact file, if any}
+
+## Evidence directory
+{if evidence was processed: "Verified evidence files are available at {docket-path}/evidence/. See {docket-path}/evidence/INDEX.md for the file manifest with conversion provenance. You can use the Read tool to examine any evidence file directly."}
+{if no evidence: omit this section entirely}
 
 ## Output format
 Follow this template exactly:
@@ -103,9 +293,7 @@ Do not write to any other path. Do not output anything else.
 
 ### Step 1.2: Dispatch proposer subagent
 
-Dispatch a subagent with the assembled prompt. Use the `deliberation-proposer` agent definition. Wait for completion.
-
-After completion, verify the file exists at `{docket-path}/positions/round-1/proposer.md`. If not, check for the output in the subagent's response and write it to the correct path.
+Dispatch a subagent with the assembled prompt. Use the `deliberation-proposer` agent definition.
 
 Output progress: `  Collecting proposer position... done`
 
@@ -125,11 +313,7 @@ Assemble the critic's dispatch prompt:
 ```
 You are the Critic in this deliberation. Your capability is challenge_all.
 
-## Tone
-{tone voice directive content, if tone was loaded — omit this entire section if no tone}
-
-### Tone examples
-{tone examples content, if tone was loaded — omit this entire section if no tone}
+[TONE BLOCK]
 
 ## Proposition
 {contents of proposition.md}
@@ -138,6 +322,10 @@ You are the Critic in this deliberation. Your capability is challenge_all.
 
 ### Proposer's position:
 {contents of proposer.md}
+
+## Evidence directory
+{if evidence was processed: "Verified evidence files are available at {docket-path}/evidence/. See {docket-path}/evidence/INDEX.md for the file manifest with conversion provenance. You can use the Read tool to examine any evidence file directly."}
+{if no evidence: omit this section entirely}
 
 ## Output format
 Follow this template exactly. You MUST use the header "## Challenges to: proposer"
@@ -152,9 +340,7 @@ Do not write to any other path. Do not output anything else.
 
 ### Step 2.2: Dispatch critic subagent
 
-Dispatch a subagent with the assembled prompt. Use the `deliberation-critic` agent definition. Wait for completion.
-
-Verify the file exists at `{docket-path}/challenges/round-1.md`.
+Dispatch a subagent with the assembled prompt. Use the `deliberation-critic` agent definition.
 
 Output progress: `  Adversarial challenge... done`
 
@@ -173,14 +359,14 @@ Read `{docket-path}/challenges/round-1.md`. Extract the section under `## Challe
 ```
 You are the Proposer. You are responding to adversarial challenges.
 
-## Tone
-{tone voice directive content, if tone was loaded — omit this entire section if no tone}
-
-### Tone examples
-{tone examples content, if tone was loaded — omit this entire section if no tone}
+[TONE BLOCK]
 
 ## Your original position
 {contents of positions/round-1/proposer.md}
+
+## Evidence directory
+{if evidence was processed: "Verified evidence files are available at {docket-path}/evidence/. See {docket-path}/evidence/INDEX.md for the file manifest with conversion provenance. You can use the Read tool to examine any evidence file directly."}
+{if no evidence: omit this section entirely}
 
 ## Challenges directed at you
 {extracted challenges section}
@@ -222,7 +408,7 @@ Write your complete response to: {docket-path}/responses/round-1/proposer.md
 
 ### Step 3.3: Dispatch proposer subagent
 
-Dispatch and wait for completion. Verify file exists.
+Dispatch using the `deliberation-proposer` agent definition.
 
 Output progress: `  Collecting proposer response... done`
 
@@ -240,18 +426,7 @@ Read `{docket-path}/responses/round-1/proposer.md`.
 
 ### Step 4.2: Categorize each challenge-response pair
 
-For each challenge that was directed at the proposer, find the corresponding response and categorize:
-
-| Markers found | Category |
-|--------------|----------|
-| `[ACTION: DEFEND]` AND one or more `[CITE:]` markers present | **Settled** |
-| `[ACTION: DEFEND]` WITHOUT any `[CITE:]` marker | **Contested** (unsupported defense) |
-| `[ACTION: CONCEDE]` | **Settled** (position updated) |
-| `[ACTION: DISSENT]` | **Settled with dissent** (concern recorded) |
-| `[ACTION: VETO]` AND `[CITE:]` marker present | **Vetoed** |
-| No `[ACTION:]` tag found for this challenge | **Contested** (unaddressed) |
-
-Be case-insensitive when checking for markers. Accept whitespace variations (e.g., `[ACTION:DEFEND]` or `[ACTION: DEFEND]`).
+For each challenge that was directed at the proposer, find the corresponding response and categorize using the **challenge-response categorization rules** defined above.
 
 ### Step 4.3: Write synthesis
 
@@ -301,65 +476,7 @@ Write to `{docket-path}/deferral.md`.
 
 ### Step 6.1: Assemble docket.json
 
-Write a JSON file to `{docket-path}/docket.json` with this structure:
-
-```json
-{
-  "id": "{docket-name}",
-  "created": "{ISO 8601 timestamp}",
-  "composition": "{composition name}",
-  "mode": "lightweight",
-  "tone": "{tone name from composition YAML, or omit this field if no tone was set}",
-  "proposition_summary": "{first sentence of proposition.md}",
-  "input_artifacts": ["{list of input file paths}"],
-  "delegates": [
-    {
-      "role": "proposer",
-      "prompt_register": "engineering design doc",
-      "grounding": null,
-      "capabilities": []
-    },
-    {
-      "role": "critic",
-      "prompt_register": "legal brief",
-      "grounding": null,
-      "capabilities": ["challenge_all"]
-    }
-  ],
-  "rules": {
-    "max_rounds": 2,
-    "independent_positions": false,
-    "require_dissent_record": true,
-    "human_deferral": false
-  },
-  "rounds": [
-    {
-      "round": 1,
-      "positions_filed": 1,
-      "challenges_filed": 1,
-      "responses_filed": 1,
-      "synthesis_status": "{settled|contested|vetoed}",
-      "contested_points": ["{list from synthesis}"]
-    }
-  ],
-  "outcome": "{ratified|forced|deferred|vetoed}",
-  "dissent": {
-    "present": "{true|false}",
-    "delegate": "{role if present}",
-    "concern": "{concern text if present}"
-  },
-  "provenance": [
-    {
-      "decision": "{key decision}",
-      "proposed_by": "proposer",
-      "challenged_by": "critic",
-      "challenge": "{challenge text}",
-      "resolved_by": "proposer",
-      "resolution": "{how resolved}"
-    }
-  ]
-}
-```
+Write `{docket-path}/docket.json` using the **docket.json schema** defined above. For lightweight mode, use hardcoded delegate values (proposer with "engineering design doc" register, critic with "legal brief" register and `challenge_all`), `independent_positions: false`, and omit `veto_roles` and `parallel_dispatches`.
 
 ### Step 6.2: Write dissent.md (if applicable)
 
@@ -419,6 +536,8 @@ Read the YAML composition file. Extract:
 - **Delegates list:** Each delegate's role, prompt, prompt_register, capabilities, grounding
 - **Chair:** The delegate with `frame_propositions` capability (typically first in the list)
 - **Adversarial delegates:** All delegates with `challenge_all` capability
+- **Research delegates:** All delegates with `research_authority` capability
+- **Verification delegates:** All delegates with `verify_sources` capability
 - **Participating delegates:** All delegates EXCEPT the Chair (these take positions)
 - **Rules:** max_rounds, independent_positions, require_dissent_record, human_deferral, veto_roles
 
@@ -473,11 +592,7 @@ You are the Chair. Frame the proposition for deliberation.
 ## Quality register
 {Chair's prompt_register from composition YAML}
 
-## Tone
-{tone voice directive content, if tone was loaded — omit this entire section if no tone}
-
-### Tone examples
-{tone examples content, if tone was loaded — omit this entire section if no tone}
+[TONE BLOCK]
 
 ## Your task
 Restate the following question as a decidable proposition — one that forces
@@ -490,13 +605,92 @@ tension that makes this decision non-obvious.
 ## Input artifacts
 {contents of each input artifact file}
 
+## Evidence directory
+{if evidence was processed: "Verified evidence files are available at {docket-path}/evidence/. See {docket-path}/evidence/INDEX.md for the manifest. Use Read to examine any file."}
+{if no evidence: omit this section}
+
 ## CRITICAL: Write your output to this exact file path
 Write the framed proposition to: {docket-path}/proposition.md
 ```
 
-Wait for completion. Verify `{docket-path}/proposition.md` exists.
-
 Output progress: `  Framing proposition... done`
+
+---
+
+## Standard Phase 1A: Pre-deliberation research (if research_authority delegates exist)
+
+If no delegates have `research_authority` capability, skip this phase entirely.
+
+Output progress: `  Pre-deliberation research ({count} delegate)...`
+
+For each delegate with `research_authority` capability, dispatch a subagent:
+
+```
+You are the {role_name} conducting pre-deliberation legal/domain research.
+
+## Your role
+{delegate's prompt from YAML or agent file}
+
+## Quality register
+{delegate's prompt_register}
+
+[TONE BLOCK]
+
+## Your task
+Research the legal and domain landscape relevant to this deliberation BEFORE
+positions are filed. Your output becomes a shared reference — all delegates
+will cite from it.
+
+## Proposition
+{contents of proposition.md}
+
+## Input artifacts
+{contents of each input artifact file}
+
+## Evidence directory
+{if evidence was processed: evidence directory path and INDEX.md reference}
+{if no evidence: omit this section}
+
+## Research instructions
+
+You have access to Scout tools (browse, scout_page_tool) for web research.
+
+1. Identify the key legal questions, statutory provisions, and doctrinal
+   frameworks relevant to the proposition
+2. For each, search for authoritative sources:
+   - Case law (Google Scholar Case Law, state court records)
+   - Statutes and regulations
+   - Secondary authority (law review articles, treatises)
+3. Record EVERY search — including searches that return NO results
+4. Verified absences are findings: "no appellate authority on X" means
+   the question is unsettled. Record these with the same rigor as
+   verified cases.
+
+## Output format
+Follow this template exactly:
+{contents of case law appendix template from ${CLAUDE_PLUGIN_ROOT}/templates/case-law-appendix.md}
+
+## CRITICAL: Write your output to this exact file path
+Write to: {docket-path}/appendix/case-law.md
+```
+
+Create the appendix directory first: `mkdir -p {docket-path}/appendix/`
+
+Dispatch using an agent with tools: Read, Write, and Scout tools (browse, scout_page_tool, find_elements, execute_action_tool, close_session, launch_session). If the delegate has a corresponding agent file, use it but ADD Scout tools to its tool list for this dispatch.
+
+Wait for completion. Verify `{docket-path}/appendix/case-law.md` exists.
+
+Output progress: `  Pre-deliberation research... done`
+
+### Make appendix available to all delegates
+
+The case law appendix is now a shared artifact. In ALL subsequent dispatch phases (position, challenge, response), include after the `## Evidence directory` section:
+
+```
+## Case law appendix
+{if appendix exists: contents of {docket-path}/appendix/case-law.md}
+{if no appendix: omit this section entirely}
+```
 
 ---
 
@@ -532,11 +726,7 @@ You are the {role_name} in this deliberation.
 ## Quality register
 {delegate's prompt_register — this is how your output should read}
 
-## Tone
-{tone voice directive content, if tone was loaded — omit this entire section if no tone}
-
-### Tone examples
-{tone examples content, if tone was loaded — omit this entire section if no tone}
+[TONE BLOCK]
 
 ## Grounding material
 {contents of grounding file if specified, otherwise "none provided"}
@@ -546,6 +736,10 @@ You are the {role_name} in this deliberation.
 
 ## Input artifacts
 {contents of each input artifact file}
+
+## Evidence directory
+{if evidence was processed: "Verified evidence files are available at {docket-path}/evidence/. See {docket-path}/evidence/INDEX.md for the file manifest with conversion provenance. You can use the Read tool to examine any evidence file directly."}
+{if no evidence: omit this section entirely}
 
 ## Output format
 Follow this template exactly:
@@ -562,8 +756,6 @@ Do not write to any other path. Do not output anything else.
 ### Dispatch ALL positions in a single response
 
 Dispatch ALL participating delegate subagents simultaneously in one response. Each runs in an isolated context window — they cannot see each other. This is how anti-anchoring is architecturally enforced.
-
-Wait for ALL to complete. Verify each position file exists.
 
 Output progress: `  Round {N} — Collecting positions... done`
 
@@ -587,11 +779,7 @@ every position.
 ## Quality register
 {delegate's prompt_register}
 
-## Tone
-{tone voice directive content, if tone was loaded — omit this entire section if no tone}
-
-### Tone examples
-{tone examples content, if tone was loaded — omit this entire section if no tone}
+[TONE BLOCK]
 
 ## Proposition
 {contents of proposition.md}
@@ -603,6 +791,10 @@ every position.
 {contents of positions/round-{N}/{role_name}.md}
 
 ---
+
+## Evidence directory
+{if evidence was processed: "Verified evidence files are available at {docket-path}/evidence/. See {docket-path}/evidence/INDEX.md for the file manifest with conversion provenance. You can use the Read tool to examine any evidence file directly."}
+{if no evidence: omit this section entirely}
 
 ## Output format
 You MUST structure your output with explicit per-delegate headers.
@@ -633,7 +825,23 @@ Write to: {docket-path}/challenges/round-{N}.md
 - If ONE adversarial delegate: dispatch sequentially (single subagent)
 - If MULTIPLE adversarial delegates: dispatch in parallel, each writes to `challenges/round-{N}-{role}.md`
 
-Wait for completion. Verify challenge file(s) exist.
+**Tool access for verify_sources delegates:** When dispatching a delegate with `verify_sources` capability, add Scout tools (browse, scout_page_tool, launch_session, find_elements, execute_action_tool, close_session) and Read to their agent tool list. Also add to their dispatch prompt:
+
+```
+## Verification capability
+You have verify_sources capability. You can use Scout tools to verify
+factual claims against external sources, and Read to verify claims against
+the evidence directory at {docket-path}/evidence/.
+
+When you verify a claim, record each verification in this format:
+- **Claim:** {what you checked}
+- **Source:** {where you checked}
+- **Result:** confirmed | refuted | inconclusive
+- **Provenance:** {specific page, section, or URL}
+
+Write your verification entries to: {docket-path}/verification-log.md
+(append to the file if it already exists)
+```
 
 Output progress: `  Round {N} — Adversarial challenge... done`
 
@@ -645,10 +853,48 @@ Output progress: `  Round {N} — Collecting responses ({count} delegates, paral
 
 ### Route challenges to each delegate
 
-Read the challenge document(s). For each participating delegate (except the adversarial delegate who wrote the challenges):
+Read the challenge document(s). Build a consolidated challenge map — a list of (challenged_delegate, challenge_text, challenger_role) tuples:
 
-1. Extract the section under `## Challenges to: {role_name}` — everything from that header until the next `## Challenges to:` header or `## Shared blind spots` or end of file
-2. If no section exists for this delegate, they were not challenged — skip them
+**For EACH challenge document** (one per adversarial delegate):
+
+1. Identify the author — the adversarial delegate who wrote this document
+2. For EACH participating delegate **other than this document's author**:
+   a. Look for a `## Challenges to: {role_name}` header in this document
+   b. If found: extract everything from that header until the next `## Challenges to:` header, `## Shared blind spots`, or end of file — add it to the challenge map as (role_name, extracted_text, author_role)
+   c. If not found: this delegate was not challenged by this author — skip
+
+**Important:** A delegate with `challenge_all` capability IS a valid challenge target for OTHER adversarial delegates. The exclusion applies only to the author of each specific document — a delegate never responds to their own challenges.
+
+3. Merge the challenge map: if multiple adversarial delegates challenged the same delegate, concatenate their challenge sections under labeled sub-headers:
+
+```
+## Challenges directed at you
+
+### From {challenger_1_role}:
+{challenge_text_1}
+
+### From {challenger_2_role}:
+{challenge_text_2}
+```
+
+### Route shared blind spots as formal challenges
+
+After building the per-delegate challenge map, extract the `## Shared blind spots` section from each challenge document.
+
+1. If only ONE adversarial delegate exists: the shared blind spots are noted in synthesis but not routed (single perspective, not a convergent finding)
+
+2. If MULTIPLE adversarial delegates exist: compare their shared blind spots sections. For each blind spot that appears in 2+ challenge documents (same concept, even if worded differently):
+   - Promote it to a formal challenge directed at ALL non-adversarial delegates
+   - Add to each non-adversarial delegate's challenge map as:
+
+```
+### Convergent blind spot (identified by {challenger_1}, {challenger_2})
+{blind spot description from the challenger who articulated it most precisely}
+
+This gap was independently identified by multiple adversarial delegates, indicating untested consensus. You MUST address it with an [ACTION:] tag.
+```
+
+3. These promoted blind spots enter synthesis like any other challenge — DEFEND+CITE, CONCEDE, or no response (contested)
 
 ### Assemble response dispatch packages
 
@@ -663,14 +909,14 @@ You are the {role_name}. You are responding to adversarial challenges.
 ## Quality register
 {delegate's prompt_register}
 
-## Tone
-{tone voice directive content, if tone was loaded — omit this entire section if no tone}
-
-### Tone examples
-{tone examples content, if tone was loaded — omit this entire section if no tone}
+[TONE BLOCK]
 
 ## Your original position
 {contents of positions/round-{N}/{role_name}.md}
+
+## Evidence directory
+{if evidence was processed: "Verified evidence files are available at {docket-path}/evidence/. See {docket-path}/evidence/INDEX.md for the file manifest with conversion provenance. You can use the Read tool to examine any evidence file directly."}
+{if no evidence: omit this section entirely}
 
 ## Challenges directed at you
 {extracted challenges section for this delegate}
@@ -687,6 +933,18 @@ Available actions:
   material. MUST include [CITE: grounding-file, invariant]. A veto is a correctness
   constraint, not a preference.
 
+**Research recovery (research_authority delegates only):**
+If you have `research_authority` capability AND you are CONCEDING a challenge
+that attacked one of your cited cases: you may perform ONE scoped research
+call using Scout tools to find replacement authority before finalizing your
+response. If you find a replacement, cite it with [CITE:] and use
+[ACTION: DEFEND]. If you confirm the absence of replacement authority,
+record the verified absence and use [ACTION: CONCEDE].
+
+Any research performed during the response phase MUST be appended to the
+case law appendix as an Addendum entry with a "Round {N} Response Phase"
+timestamp.
+
 Do NOT ignore any challenge. Every challenge gets exactly one action tag.
 
 ## CRITICAL: Write your output to this exact file path
@@ -695,9 +953,42 @@ Write to: {docket-path}/responses/round-{N}/{role_name}.md
 
 ### Dispatch ALL responses in a single response
 
-Dispatch all challenged delegates simultaneously. Wait for ALL to complete. Verify each response file exists.
+Dispatch all challenged delegates simultaneously. For delegates with `research_authority`, add Scout tools to their dispatch (same tool list as Phase 1A: browse, scout_page_tool, find_elements, execute_action_tool, close_session, launch_session).
+
+**Tool access for verify_sources delegates:** When dispatching a delegate with `verify_sources` capability, add Scout tools (browse, scout_page_tool, launch_session, find_elements, execute_action_tool, close_session) and Read to their agent tool list. Also add to their dispatch prompt:
+
+```
+## Verification capability
+You have verify_sources capability. You can use Scout tools to verify
+factual claims against external sources, and Read to verify claims against
+the evidence directory at {docket-path}/evidence/.
+
+When you verify a claim, record each verification in this format:
+- **Claim:** {what you checked}
+- **Source:** {where you checked}
+- **Result:** confirmed | refuted | inconclusive
+- **Provenance:** {specific page, section, or URL}
+
+Write your verification entries to: {docket-path}/verification-log.md
+(append to the file if it already exists)
+```
 
 Output progress: `  Round {N} — Collecting responses... done`
+
+### Verify response completeness
+
+Before proceeding to synthesis, verify that every delegate in the challenge map produced a response file:
+
+1. For each delegate that appears as a challenge target in the challenge map (from "Route challenges to each delegate" above):
+   - Check that `{docket-path}/responses/round-{N}/{role_name}.md` exists
+   - If missing: this delegate was challenged but did not respond
+
+2. If ANY response files are missing:
+   - Output warning: `  ⚠ Missing responses: {list of role names}`
+   - For synthesis purposes, treat every challenge directed at a non-responding delegate as **Contested (unaddressed)** — the "No `[ACTION:]` tag" row in the categorization table applies
+   - Do NOT halt the deliberation — proceed to synthesis with the contested markers
+
+This check catches the exact failure mode where a delegate is incorrectly excluded from response routing — the downstream effect is contested points that force a Round 2, rather than silent premature settlement.
 
 ---
 
@@ -713,22 +1004,32 @@ Read every file in `{docket-path}/responses/round-{N}/`.
 
 ### Categorize each challenge-response pair
 
-For each delegate's response, for each challenge directed at them:
-
-| Markers found | Category |
-|--------------|----------|
-| `[ACTION: DEFEND]` with `[CITE:]` | **Settled** |
-| `[ACTION: DEFEND]` without `[CITE:]` | **Contested** (unsupported) |
-| `[ACTION: CONCEDE]` | **Settled** (position updated) |
-| `[ACTION: DISSENT]` | **Settled with dissent** |
-| `[ACTION: VETO]` with `[CITE:]` | **Vetoed** |
-| No `[ACTION:]` tag | **Contested** (unaddressed) |
-
-Be case-insensitive. Accept whitespace variations.
+Apply the **challenge-response categorization rules** defined above to each delegate's response.
 
 ### Write synthesis
 
 Write to `{docket-path}/synthesis/round-{N}.md` using the synthesis template.
+
+### Verification coverage map
+
+If a verification log exists at `{docket-path}/verification-log.md`:
+
+1. Read the verification log
+2. Read the latest synthesis or decision document
+3. Identify all factual claims — statements that assert something about evidence, documents, dates, amounts, or events (NOT legal arguments or analytical conclusions)
+4. Cross-reference each factual claim against the verification log
+5. Append a coverage summary to the verification log using the template format:
+   - Count of factual claims
+   - Count verified (confirmed + refuted + inconclusive)
+   - Count not checked
+   - List each unchecked claim with its source reference
+
+6. Also append a brief verification coverage line to the synthesis output:
+
+```
+## Verification coverage
+Factual claims: {N} | Verified: {M} ({confirmed} confirmed, {refuted} refuted, {inconclusive} inconclusive) | Not checked: {N-M}
+```
 
 ### Determine round outcome
 
@@ -760,11 +1061,7 @@ You are the Chair. Write the ratified decision document.
 ## Quality register
 {Chair's prompt_register}
 
-## Tone
-{tone voice directive content, if tone was loaded — omit this entire section if no tone}
-
-### Tone examples
-{tone examples content, if tone was loaded — omit this entire section if no tone}
+[TONE BLOCK]
 
 ## Your task
 Read all deliberation materials and write decision.md — the authoritative
@@ -787,6 +1084,18 @@ artifact the user will act on.
 ### Responses
 {contents of each delegate's response files}
 
+### Evidence directory
+{if evidence was processed: "Verified evidence files are available at {docket-path}/evidence/. See {docket-path}/evidence/INDEX.md for the manifest. Use Read to examine any file."}
+{if no evidence: omit this section}
+
+### Case law appendix
+{if appendix exists: contents of {docket-path}/appendix/case-law.md}
+{if no appendix: omit this section}
+
+### Verification log
+{if verification log exists: contents of {docket-path}/verification-log.md}
+{if no verification log: omit this section}
+
 ## Outcome: {ratified | ratified with dissent | forced | deferred | vetoed}
 
 ## Instructions
@@ -794,76 +1103,23 @@ artifact the user will act on.
 - Include a provenance table: for each key decision, who proposed, who challenged, how resolved
 - If dissent was registered, include the dissent record
 - If deferred, include the competing positions and the specific question for the human
+- Cross-reference delegate claims against the evidence directory and case
+  law appendix. If a delegate claims X but the evidence shows Y, note the
+  discrepancy.
+- If challenges raised issue X and the response addressed issue Y (adjacent
+  but different topics), flag this as potentially miscategorized in synthesis
+- Include the verification coverage summary in the decision if a verification
+  log exists
 
 ## CRITICAL: Write your output to this exact file path
 Write to: {docket-path}/decision.md
 ```
 
-Wait for completion. Verify file exists.
-
 Output progress: `  Writing decision... done`
 
 ### Engine writes docket.json
 
-Assemble `docket.json` with:
-
-```json
-{
-  "id": "{docket-name}",
-  "created": "{ISO 8601 timestamp}",
-  "composition": "{composition name from YAML}",
-  "mode": "standard",
-  "tone": "{tone name from composition YAML, or omit this field if no tone was set}",
-  "proposition_summary": "{first sentence of proposition.md}",
-  "input_artifacts": ["{list of input file paths}"],
-  "delegates": [
-    {
-      "role": "{role}",
-      "prompt_register": "{prompt_register}",
-      "grounding": "{grounding path or null}",
-      "capabilities": ["{capabilities}"]
-    }
-  ],
-  "rules": {
-    "max_rounds": "{from YAML}",
-    "independent_positions": true,
-    "require_dissent_record": "{from YAML}",
-    "human_deferral": "{from YAML}",
-    "veto_roles": ["{from YAML}"]
-  },
-  "rounds": [
-    {
-      "round": 1,
-      "positions_filed": "{count}",
-      "challenges_filed": "{count}",
-      "responses_filed": "{count}",
-      "synthesis_status": "{settled|contested|vetoed}",
-      "contested_points": ["{list}"],
-      "parallel_dispatches": [
-        {"phase": "positions", "delegates": "{count}", "parallel": true},
-        {"phase": "challenges", "delegates": "{count}", "parallel": "{true if multiple challenge_all}"},
-        {"phase": "responses", "delegates": "{count}", "parallel": true}
-      ]
-    }
-  ],
-  "outcome": "{ratified|ratified_with_dissent|forced|deferred|vetoed}",
-  "dissent": {
-    "present": "{true|false}",
-    "delegate": "{role}",
-    "concern": "{concern text}"
-  },
-  "provenance": [
-    {
-      "decision": "{key decision}",
-      "proposed_by": "{role}",
-      "challenged_by": "{role}",
-      "challenge": "{challenge text}",
-      "resolved_by": "{role or consensus}",
-      "resolution": "{how resolved}"
-    }
-  ]
-}
-```
+Write `{docket-path}/docket.json` using the **docket.json schema** defined above. For standard mode, populate delegates and rules from the composition YAML, set `independent_positions: true`, and include `parallel_dispatches` in each round entry with phase-level dispatch metadata.
 
 ### Write dissent.md (if applicable)
 

@@ -269,6 +269,34 @@ Your custom tone appears automatically in `/delphi-compose` and is available via
 
 ---
 
+## Evidence & verification
+
+For deliberations involving source documents, Delphi provides an evidence pipeline and verification capabilities.
+
+### Evidence submission
+
+```bash
+/delphi --config comp.yml --evidence ./documents/
+```
+
+Source files (PDFs, DOCX, text) are converted to searchable text with per-file provenance tracking. An evidence index records conversion method (born-digital vs. OCR), confidence level, and SHA-256 hashes for reproducibility.
+
+### Capabilities
+
+| Capability | Role | Timing | Purpose |
+|---|---|---|---|
+| `frame_propositions` | Chair | Proposition + decision | Precise framing, synthesis quality |
+| `challenge_all` | Adversarial | Challenge phase | Mandatory challenges |
+| `veto_invariant_violations` | Domain expert | Response phase | Correctness constraints |
+| `research_authority` | Specialist | Pre-deliberation + recovery | Case law appendix with verified absences |
+| `verify_sources` | Auditor | Challenge/response phases | Factual verification with coverage map |
+
+### Verification coverage
+
+The engine tracks which factual claims were independently verified and which were not. The decision document includes a coverage summary showing verification depth — epistemic honesty about what was checked vs. what delegates asserted without independent verification.
+
+---
+
 ## When to use it
 
 Architecture decisions are the obvious use case, but deliberation applies anywhere you'd want a second opinion before committing: **debugging** (force adversarial hypothesis testing instead of confirmation bias), **pre-merge review** (is the approach sound, not just the code), **incident post-mortems**, **migration strategy**, **dependency decisions**, **RFC review**, and more.

@@ -42,3 +42,13 @@ When dispatched to write the ratified decision:
 - You do not soften or strengthen any delegate's position
 - You do not resolve contested points — that is the engine's job based on structural markers
 - You are the facilitator. The delegates are the participants. The engine is the judge.
+
+## Evidence access
+
+When evidence directory, case law appendix, or verification log are provided
+in your dispatch, use them to:
+- Verify that delegate positions are grounded in actual evidence
+- Assess whether settled points in synthesis reflect substantive resolution
+  or merely structural marker presence
+- Note discrepancies between what delegates claim and what the evidence shows
+- Include verification coverage in the decision document

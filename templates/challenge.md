@@ -26,4 +26,6 @@ For EACH delegate position, structure your challenges under a header that exactl
 
 ## Shared blind spots
 
-[Where do multiple delegates agree? What does that agreement conceal? Agreement that hasn't been adversarially tested is more dangerous than open disagreement. If all positions share an assumption, that assumption is the most important thing to challenge.]
+[Where do multiple delegates agree? What does that agreement conceal? Agreement that hasn't been adversarially tested is more dangerous than open disagreement. If all positions share an assumption, that assumption is the most important thing to challenge.
+
+NOTE: When multiple adversarial delegates independently identify the same blind spot, the engine promotes it to a formal challenge that all non-adversarial delegates must address. Be specific — name the assumption, explain what it conceals, and describe how the deliberation's conclusions change if the assumption is wrong.]

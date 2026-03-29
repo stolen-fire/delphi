@@ -12,6 +12,9 @@ Claude Code plugin for structured multi-agent deliberation with adversarial revi
 - **Standard mode** (3-5 delegates, parallel dispatch): fully implemented and working — engine at `skills/delphi/SKILL.md` line 27 delegates to the standard protocol reference at `skills/standard-deliberation/SKILL.md`
 - **Tone system**: 5 built-in tones (snarky, diplomatic, adversarial, socratic, parliamentary), user-extensible via `.claude/delphi/tones/`
 - **Observatory** (`/delphi-observe`): browser-based viewer for deliberation dockets — issue-threaded layout with AI commentary, supports live and post-hoc modes via visualizer MCP
+- **Evidence pipeline**: evidence submission via `--evidence` flag or YAML `evidence:` field, PDF conversion (pdftotext + Tesseract), evidence index with provenance, SHA-256 hashing
+- **Capabilities**: `research_authority` (pre-deliberation case law appendix with verified absences, recovery window on concession), `verify_sources` (mid-deliberation auditor verification with four-category coverage map)
+- **Chair evidence access**: Chair reads evidence directory, case law appendix, and verification log during proposition framing and decision writing
 
 ## Plugin Architecture
 
@@ -22,6 +25,9 @@ Claude Code plugin for structured multi-agent deliberation with adversarial revi
 - Compositions (YAML) define delegate rosters, rules, and output config
 - Grounding files referenced in compositions are relative to the USER's project, not the plugin
 - Docket output (`.deliberation/dockets/`) is intended to be committed by users as deliberation records
+- Evidence pipeline: conversion is engine setup (preprocessing), not a deliberation phase
+- Capabilities: `frame_propositions` (Chair), `challenge_all` (adversarial), `veto_invariant_violations` (domain), `research_authority` (pre-deliberation + recovery), `verify_sources` (mid-deliberation)
+- Verified absences are findings with provenance, never silently omitted
 
 ## Conventions
 
