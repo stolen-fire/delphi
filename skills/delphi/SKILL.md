@@ -22,10 +22,12 @@ When invoked, you receive either:
 ### Step 0.1: Determine mode
 
 - If you received an inline question with no `--config`: use the **hardcoded lightweight composition** defined in the lightweight-deliberation protocol reference at `${CLAUDE_PLUGIN_ROOT}/skills/lightweight-deliberation/SKILL.md`. If a `--tone` flag was provided, load the tone file using the resolution precedence described in Standard Phase 0 > Tone loading. The loaded tone is injected into all lightweight dispatch prompts. Proceed to **Lightweight Protocol** below.
+- If you received a `mode: code-review` signal (invoked from `/delphi-review`): proceed to **Code Review Protocol** below. If a `--tone` flag was provided, load the tone file using the resolution precedence described in Standard Phase 0 > Tone loading.
 - If you received a `--config` path: read the YAML file, extract `mode:` field
   - If a `--tone` flag was provided, it overrides any `tone` field in the composition YAML
   - If `mode: lightweight` (or 2 delegates): proceed to **Lightweight Protocol** below
   - If a tone is set (from `--tone` flag or composition YAML), load the tone file using the resolution precedence described in Standard Phase 0 > Tone loading. The loaded tone is injected into all lightweight dispatch prompts.
+  - If `mode: code-review`: proceed to **Code Review Protocol** below
   - If `mode: standard` (or 3+ delegates): proceed to **Standard Protocol** below
 
 ### Step 0.2: Create docket directory
@@ -1169,3 +1171,535 @@ Repeat Standard Phases 2-5 with compressed context:
 Update `docket.json` rounds array with round N data.
 
 If still contested after max_rounds, apply terminal behavior per rules (deferred or forced).
+
+---
+---
+
+# Code Review Protocol
+
+Use this protocol when mode is code-review (invoked from `/delphi-review` command, or YAML composition with `mode: code-review`). Sequential dispatch with 3 default delegates + conditional Enforcer.
+
+Read the protocol reference at `${CLAUDE_PLUGIN_ROOT}/skills/code-review-deliberation/SKILL.md` for rules on delegate dispatch contracts, anti-anchoring, and remediation plan generation.
+
+---
+
+## Review Phase 0: Initialization
+
+### Step 0.1: Parse review context
+
+When invoked from `/delphi-review`, you receive:
+- **review_artifact:** assembled code content (files or diff with full file contents)
+- **review_files:** list of file paths being reviewed
+- **review_type:** `files` or `diff`
+- **diff_ref:** git ref if diff mode (or `staged`)
+- **conventions:** conventions file path and contents (or null)
+- **composition:** parsed YAML (or null for hardcoded defaults)
+- **tone:** tone name (or null)
+
+### Step 0.2: Determine delegate roster
+
+**Quick-path (no composition):**
+Use the hardcoded roster:
+
+| Role | Agent | Role type |
+|------|-------|-----------|
+| advocate | `deliberation-advocate` | participant |
+| critic | `deliberation-critic` | challenger |
+| maintainer | `deliberation-maintainer` | challenger |
+| enforcer (conditional) | `deliberation-enforcer` | auditor |
+
+The Enforcer is included ONLY when conventions are provided.
+
+**Composition path:**
+Read the YAML delegate list. For each delegate:
+1. Use `role_type` to determine dispatch phase
+2. Resolve agent file using the same precedence as Standard Protocol (project `.claude/agents/` > plugin `agents/` > YAML prompt only)
+3. Validate: at least one `participant` and one `challenger` required
+
+### Step 0.3: Create docket directory
+
+Generate docket name: `{YYYYMMDD}-{HHmmss}-review-{slug}` where slug is derived from the first reviewed filename (e.g., `review-dashboard-tsx`).
+
+Create directory structure using Bash `mkdir -p`:
+
+```
+.deliberation/dockets/{docket-name}/
+  code-under-review/
+  positions/round-1/
+  challenges/
+  responses/round-1/
+  compliance/
+  synthesis/
+  remediation/
+```
+
+Only create `compliance/` if conventions are provided.
+
+### Step 0.4: Snapshot code under review
+
+Copy each reviewed file to `{docket-path}/code-under-review/`:
+- For file review: copy each file preserving the filename
+- For diff review: write `diff.patch` with the raw diff, and copy each changed file
+
+This makes the docket self-contained — the review is reproducible even if source files change.
+
+### Step 0.5: Write proposition
+
+Write `{docket-path}/proposition.md`:
+
+```
+# Code Review Proposition
+
+**Review type:** {files | diff}
+**Files:** {comma-separated list of file paths}
+**Conventions:** {conventions file path, or "none"}
+
+## Proposition
+
+Review the following code for quality, correctness, maintainability, and
+convention compliance. The Advocate will defend the implementation. The
+Critic will challenge its correctness and robustness. The Maintainer will
+evaluate its comprehensibility and modification safety.
+{If conventions: "The Enforcer will audit against stated conventions."}
+
+## Code under review
+
+{review_artifact content — the assembled code/diff}
+```
+
+### Step 0.6: Tone loading
+
+If a tone was provided, load it using the same resolution precedence as Standard Protocol:
+1. `.claude/delphi/tones/{tone}.md` (user-defined)
+2. `${CLAUDE_PLUGIN_ROOT}/tones/{tone}.md` (built-in)
+3. Warning if not found, proceed without tone
+
+---
+
+## Review Phase 1: Advocate position
+
+Output progress: `Code review: {slug}`
+Output progress: `  Advocate position...`
+
+### Step 1.1: Assemble dispatch package
+
+Read the position template from `${CLAUDE_PLUGIN_ROOT}/templates/position.md`.
+
+Assemble the Advocate's dispatch prompt:
+
+```
+You are the Advocate in this code review.
+
+## Your role
+You read the code under review, understand what it does, and defend the
+implementation choices. Argue like an engineering design doc — direct
+assertions backed by evidence from the actual code.
+
+[TONE BLOCK]
+
+## Proposition
+{contents of proposition.md}
+
+## Conventions
+{if conventions provided: contents of conventions file}
+{if no conventions: "No conventions file provided. Evaluate against general best practices."}
+
+## Output format
+Follow this template exactly:
+{contents of position template}
+
+Write "# Position: advocate" as your heading.
+
+## CRITICAL: Write your output to this exact file path
+Write your complete position to: {docket-path}/positions/round-1/advocate.md
+
+Do not write to any other path. Do not output anything else.
+```
+
+### Step 1.2: Dispatch advocate subagent
+
+Dispatch a subagent with the assembled prompt. Use the `deliberation-advocate` agent definition.
+
+Output progress: `  Advocate position... done`
+
+---
+
+## Review Phase 2: Critic challenge
+
+Output progress: `  Critic challenge...`
+
+### Step 2.1: Assemble dispatch package
+
+Read the challenge template from `${CLAUDE_PLUGIN_ROOT}/templates/challenge.md`.
+Read the Advocate's position from `{docket-path}/positions/round-1/advocate.md`.
+
+Assemble the Critic's dispatch prompt:
+
+```
+You are the Critic in this code review. Your capability is challenge_all.
+
+[TONE BLOCK]
+
+## Proposition
+{contents of proposition.md}
+
+## Position to challenge
+
+### Advocate's position:
+{contents of advocate.md}
+
+## Output format
+Follow this template exactly. You MUST use the header "## Challenges to: advocate"
+(the exact role name) so the engine can route your challenges correctly.
+{contents of challenge template}
+
+Note: In code review mode, adapt the template sections to code concerns:
+- "Weakest claim" → the least-supported defense of a code choice
+- "Untested assumption" → an assumption about correctness, performance, or behavior
+- "Failure scenario" → a concrete scenario where this code breaks
+
+## CRITICAL: Write your output to this exact file path
+Write your complete challenge document to: {docket-path}/challenges/round-1-critic.md
+
+Do not write to any other path. Do not output anything else.
+```
+
+### Step 2.2: Dispatch critic subagent
+
+Dispatch using the `deliberation-critic` agent definition.
+
+Output progress: `  Critic challenge... done`
+
+---
+
+## Review Phase 3: Maintainer challenge
+
+Output progress: `  Maintainer challenge...`
+
+### Step 3.1: Assemble dispatch package
+
+Read the Advocate's position from `{docket-path}/positions/round-1/advocate.md`.
+
+**Anti-anchoring: Do NOT read or include the Critic's challenges.**
+
+Assemble the Maintainer's dispatch prompt:
+
+```
+You are the Maintainer in this code review. You read code as someone who
+will inherit it in 6 months with no access to the original author.
+
+[TONE BLOCK]
+
+## Proposition
+{contents of proposition.md}
+
+## Position to challenge
+
+### Advocate's position:
+{contents of advocate.md}
+
+## Output format
+Structure your challenges under this exact header:
+
+## Challenges to: advocate
+
+### Naming and clarity
+[Are names self-documenting? Flag anything that requires reading the body
+to understand the name.]
+
+### Abstraction quality
+[Are abstractions justified? Is there unnecessary indirection or missing
+extraction?]
+
+### Modification safety
+[What would you be afraid to touch? Where are hidden coupling points?]
+
+### Missing context
+[What would a new developer need to know that isn't in the code?]
+
+## CRITICAL: Write your output to this exact file path
+Write your complete challenge document to: {docket-path}/challenges/round-1-maintainer.md
+
+Do not write to any other path. Do not output anything else.
+```
+
+### Step 3.2: Dispatch maintainer subagent
+
+Dispatch using the `deliberation-maintainer` agent definition.
+
+Output progress: `  Maintainer challenge... done`
+
+---
+
+## Review Phase 4: Enforcer compliance report (conditional)
+
+**Skip this phase entirely if no conventions were provided.**
+
+Output progress: `  Enforcer compliance check...`
+
+### Step 4.1: Assemble dispatch package
+
+Read the compliance report template from `${CLAUDE_PLUGIN_ROOT}/templates/compliance-report.md`.
+
+Assemble the Enforcer's dispatch prompt:
+
+```
+You are the Enforcer in this code review. You audit code against conventions.
+
+[TONE BLOCK]
+
+## Code under review
+{review_artifact content — the assembled code/diff}
+
+## Conventions to enforce
+{contents of conventions file}
+
+## Output format
+Follow this template exactly:
+{contents of compliance report template}
+
+## CRITICAL: Write your output to this exact file path
+Write your complete compliance report to: {docket-path}/compliance/enforcer-report.md
+
+Do not write to any other path. Do not output anything else.
+```
+
+### Step 4.2: Dispatch enforcer subagent
+
+Dispatch using the `deliberation-enforcer` agent definition.
+
+**The Enforcer does NOT participate in the challenge-response cycle.** Its report is appended to the docket and feeds into the remediation plan, but the Advocate does not respond to it.
+
+Output progress: `  Enforcer compliance check... done`
+
+---
+
+## Review Phase 5: Advocate response
+
+Output progress: `  Advocate response...`
+
+### Step 5.1: Extract challenges from both challengers
+
+Read `{docket-path}/challenges/round-1-critic.md`. Extract the section under `## Challenges to: advocate`.
+Read `{docket-path}/challenges/round-1-maintainer.md`. Extract the section under `## Challenges to: advocate`.
+
+### Step 5.2: Assemble dispatch package
+
+```
+You are the Advocate. You are responding to adversarial challenges from
+the Critic and the Maintainer.
+
+[TONE BLOCK]
+
+## Your original position
+{contents of positions/round-1/advocate.md}
+
+## Challenges directed at you
+
+### From Critic:
+{extracted challenges from critic}
+
+### From Maintainer:
+{extracted challenges from maintainer}
+
+## Response instructions
+For EACH challenge, you MUST respond with EXACTLY ONE action tag. The engine
+parses these tags to determine whether your defense is adequate.
+
+Available actions:
+- [ACTION: DEFEND] — Refute the challenge with evidence. You MUST include at
+  least one [CITE: filename, line] marker pointing to actual code. Example:
+
+  [ACTION: DEFEND]
+  The naming concern is addressed — `processPayment` clearly describes the
+  function's purpose. [CITE: PaymentService.tsx, line 42] shows the function
+  handles exactly one payment transaction with explicit error boundaries.
+
+- [ACTION: CONCEDE] — Accept the challenge as valid. State what should change
+  in the code. Example:
+
+  [ACTION: CONCEDE]
+  The maintainer is correct that the nested ternary on line 87 is unreadable.
+  This should be extracted to a named helper function with descriptive parameter names.
+
+- [ACTION: DISSENT] — Accept the finding but record disagreement. Example:
+
+  [ACTION: DISSENT]
+  I accept that the abstraction adds indirection, but want it on the record
+  that removing it would create duplication across 3 call sites that will
+  diverge over time.
+
+Respond to EVERY challenge from BOTH the Critic and the Maintainer. Use
+clear headers to organize your responses:
+
+### Response to Critic
+
+[responses with action tags]
+
+### Response to Maintainer
+
+[responses with action tags]
+
+Do NOT ignore any challenge. Every challenge gets exactly one action tag.
+
+## CRITICAL: Write your output to this exact file path
+Write your complete response to: {docket-path}/responses/round-1/advocate.md
+```
+
+### Step 5.3: Dispatch advocate subagent
+
+Dispatch using the `deliberation-advocate` agent definition.
+
+Output progress: `  Advocate response... done`
+
+---
+
+## Review Phase 6: Synthesis (engine logic — NOT a subagent)
+
+Output progress: `  Synthesizing review...`
+
+This phase is performed by YOU (the engine), not by a subagent.
+
+### Step 6.1: Read all files
+
+Read `{docket-path}/responses/round-1/advocate.md`.
+If Enforcer ran: read `{docket-path}/compliance/enforcer-report.md`.
+
+### Step 6.2: Categorize challenge-response pairs
+
+For each challenge from the Critic and Maintainer, find the Advocate's corresponding response and categorize using the **challenge-response categorization rules** defined in the shared engine rules above.
+
+### Step 6.3: Write synthesis
+
+Read the synthesis template from `${CLAUDE_PLUGIN_ROOT}/templates/synthesis.md`.
+Fill in the tables. Write to `{docket-path}/synthesis/round-1.md`.
+
+If Enforcer ran, append to the synthesis:
+
+```
+## Compliance report summary
+
+Conventions checked: {N} | Pass: {N} | Fail: {N} | N/A: {N}
+
+Failed conventions are included in the remediation plan as Critical items.
+Full report: compliance/enforcer-report.md
+```
+
+### Step 6.4: Determine outcome
+
+Code review uses single-round by default (quick-path). The outcome is always terminal:
+- ALL settled: **clean** (code passes review)
+- ANY contested or conceded: **findings** (remediation needed)
+- If composition specifies `max_rounds > 1`: follow the same multi-round logic as Lightweight Protocol
+
+Output progress: `  Synthesis: {settled} settled, {contested} contested, {conceded} conceded`
+
+---
+
+## Review Phase 7: Remediation plan (engine logic — NOT a subagent)
+
+Output progress: `  Generating remediation plan...`
+
+### Step 7.1: Collect findings
+
+From the synthesis and compliance report, build a findings list:
+
+**Critical findings:**
+- Every contested point (Advocate's defense was unsupported or absent)
+- Every `[ACTION: CONCEDE]` from the Advocate
+- Every failure in the Enforcer's compliance report
+
+**Recommended findings:**
+- Every `[ACTION: DISSENT]` from the Advocate
+
+**Optional findings:**
+- Every `[ACTION: DEFEND]` with self-referential `[CITE:]` (flagged in synthesis)
+- Successfully defended points where the Maintainer raised the concern (awareness items)
+
+### Step 7.2: Trace to code locations
+
+For EACH finding, extract the `[CITE: filename, line]` markers from the delegate challenges and Advocate responses. Map each finding to a specific File + Lines + Action triple.
+
+If a finding has no `[CITE:]` marker pointing to a specific code location, attempt to infer the location from the challenge text (file names, function names, line references in the challenge prose). If still unresolvable, include the finding with `Lines: N/A` and a note: "Code location could not be determined from delegate output."
+
+### Step 7.3: Write remediation plan
+
+Read the remediation plan template from `${CLAUDE_PLUGIN_ROOT}/templates/remediation-plan.md`.
+Fill in all findings organized by priority tier.
+Write to `{docket-path}/remediation/plan.md`.
+
+Output progress: `  Remediation plan: {critical} critical, {recommended} recommended, {optional} optional`
+
+---
+
+## Review Phase 8: Docket finalization
+
+### Step 8.1: Write docket.json
+
+Write `{docket-path}/docket.json`:
+
+```json
+{
+  "id": "{docket-name}",
+  "created": "{ISO 8601 timestamp}",
+  "mode": "code-review",
+  "tone": "{tone name, or omit if none}",
+  "review_target": {
+    "type": "{files | diff}",
+    "paths": ["{list of file paths}"],
+    "diff_ref": "{git ref or 'staged', omit if file mode}",
+    "conventions": "{conventions file path, omit if none}"
+  },
+  "delegates": [
+    {
+      "role": "{role}",
+      "role_type": "{participant | challenger | auditor}",
+      "agent": "{agent file name}"
+    }
+  ],
+  "rules": {
+    "max_rounds": 1,
+    "independent_challenges": true,
+    "enforcer_active": "{true | false}"
+  },
+  "outcome": "{clean | findings}",
+  "remediation": {
+    "critical": "{count}",
+    "recommended": "{count}",
+    "optional": "{count}"
+  },
+  "provenance": [
+    {
+      "finding": "{finding title}",
+      "raised_by": "{role}",
+      "response": "{DEFEND | CONCEDE | DISSENT | none}",
+      "resolution": "{settled | contested | conceded | dissent}"
+    }
+  ]
+}
+```
+
+### Step 8.2: Present results
+
+Output progress: `  Docket: .deliberation/dockets/{docket-name}/`
+
+Present a summary to the user:
+
+```
+## Code Review: {slug}
+
+**Outcome:** {Clean — no findings | Findings — remediation needed}
+
+### Summary
+- Settled (code defended): {N}
+- Contested (defense failed): {N}
+- Conceded (advocate agreed): {N}
+- Convention failures: {N} (if Enforcer ran)
+
+### Remediation plan
+{If findings: display contents of remediation/plan.md}
+{If clean: "No remediation needed. All challenges were addressed with evidence."}
+
+Docket: `.deliberation/dockets/{docket-name}/`
+Remediation plan: `.deliberation/dockets/{docket-name}/remediation/plan.md`
+```
