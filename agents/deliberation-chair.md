@@ -5,6 +5,7 @@ description: >
   writes ratified decision documents. Procedural authority only — does not
   advocate for any position. Dispatched by the engine for framing and
   decision writing in standard mode.
+role_type: facilitator
 model: inherit
 tools:
   - Read

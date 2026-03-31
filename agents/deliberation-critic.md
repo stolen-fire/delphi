@@ -4,6 +4,7 @@ description: >
   Default adversarial critic for the deliberation plugin. Challenges all
   positions, finds untested assumptions, manufactures failure scenarios.
   Dispatched by the deliberation engine during challenge phases.
+role_type: challenger
 model: inherit
 tools:
   - Read

@@ -4,6 +4,7 @@ description: >
   Default proposer delegate for the deliberation plugin. Takes a clear position
   and defends it with evidence. Dispatched by the deliberation engine during
   position and response phases.
+role_type: participant
 model: inherit
 tools:
   - Read
