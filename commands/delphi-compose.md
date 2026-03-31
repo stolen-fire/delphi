@@ -26,6 +26,21 @@ Capture the response. Derive a slug from it for the composition `name` field: lo
 
 ---
 
+## Code review escape hatch
+
+After capturing the decision, assess whether the user is describing a code review (reviewing existing code for quality, compliance, or correctness) rather than a decision deliberation.
+
+Signal phrases: "review code", "check code", "audit", "compliance", "code quality", "review my implementation", "review these files", "design system", "convention check"
+
+If it seems like a code review, use `AskUserQuestion` to ask:
+
+> This sounds like a code review rather than a decision deliberation. Would you like me to build a code review composition (`mode: code-review`) or a standard deliberation?
+
+If code review: proceed to **Code Review Composition** below.
+If standard deliberation: proceed to the lightweight escape hatch as normal.
+
+---
+
 ## Lightweight escape hatch
 
 After capturing the decision (whether from arguments or Step 1), assess whether this is a simple binary question with low stakes and no domain-specific perspectives needed.
@@ -292,6 +307,70 @@ When you're ready:
 
 ---
 
+---
+
+## Code Review Composition
+
+When building a code review composition, follow these modified steps:
+
+### CR Step 1 — Review concerns
+
+Use `AskUserQuestion` to ask:
+
+> What aspects of the code do you want reviewed? (e.g., design system compliance, security, performance, maintainability, API contract, accessibility)
+
+### CR Step 2 — Conventions and grounding
+
+Use `AskUserQuestion` to ask:
+
+> Do you have a conventions document, style guide, or design system rules file that delegates should enforce? (path or "none")
+
+If provided: verify with Glob, store for assignment to auditor delegates.
+
+### CR Step 3 — Propose the panel
+
+Map review concerns to delegate archetypes:
+
+| Review concern | Delegate archetype | Role type |
+|---|---|---|
+| General code quality | Advocate + Critic | participant + challenger |
+| Maintainability | Maintainer | challenger |
+| Design system compliance | Design system critic | challenger |
+| Convention enforcement | Enforcer | auditor |
+| Security | Security reviewer | challenger |
+| Performance | Performance reviewer | challenger |
+| Accessibility | Accessibility auditor | auditor |
+| API contract compliance | Contract enforcer | auditor |
+
+Every code review panel MUST include:
+1. An **Advocate** (`role_type: participant`) — defends the code
+2. At least one **Challenger** (`role_type: challenger`) — attacks the code
+
+Auditor delegates require a grounding file — ask for one if the user selected an auditor concern without providing grounding in CR Step 2.
+
+Present the panel and get approval (same flow as standard Step 4).
+
+### CR Step 4 — Rules and output
+
+Code review compositions use:
+- `max_rounds: 1` (default, adjustable)
+- `independent_positions: true`
+- `require_dissent_record: true`
+- `human_deferral: false` (code review decisions don't need human escalation by default)
+
+Present and get approval (same flow as standard Step 5).
+
+### CR Step 5 — Write and offer to run
+
+Write the YAML with `mode: code-review` and `role_type` on each delegate. Offer to run:
+
+```
+When you're ready:
+/delphi-review --config {path} <files to review>
+```
+
+---
+
 ## Invariants
 
 These must ALWAYS hold for any generated composition:
@@ -305,3 +384,6 @@ These must ALWAYS hold for any generated composition:
 7. `independent_positions` is always `true`
 8. `require_dissent_record` is always `true`
 9. If `tone` is set, the tone file must exist in either `${CLAUDE_PLUGIN_ROOT}/tones/` or `.claude/delphi/tones/`
+10. Code review compositions must have `mode: code-review`
+11. Code review compositions must have at least one `participant` and one `challenger` by `role_type`
+12. Auditor delegates in code review compositions must have a `grounding` file
