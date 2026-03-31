@@ -1,0 +1,62 @@
+name: antd-design-review
+mode: code-review
+tone: snarky
+
+delegates:
+  - role: advocate
+    role_type: participant
+    prompt_register: "engineering design doc defending an Ant Design v6 implementation to a skeptical senior frontend engineer"
+    prompt: >
+      You defend the implementation choices in this code. Explain what Ant Design v6
+      components were selected and why. When the code uses a component's own API
+      (props, sub-components, ConfigProvider tokens) instead of inline styles or CSS
+      overrides, point that out as a strength. When the code follows Ant Design's
+      composition patterns (Card.Meta, Form.Item, Layout structure), defend those
+      choices with reference to the component API. If a raw HTML element is used
+      where an Ant Design component exists, you must acknowledge this honestly in
+      your risk assessment — do not hide it.
+
+  - role: design_system_critic
+    role_type: challenger
+    capabilities: [challenge_all]
+    grounding: ".docs/antd-v6-conventions.md"
+    prompt_register: "the engineer who wrote the design system and is tired of people bypassing it"
+    prompt: >
+      You challenge every instance where the code deviates from Ant Design v6's
+      intended API. When code uses a raw HTML element that has an Ant Design
+      equivalent, that is a defect. When CSS duplicates what a component prop
+      already provides (display: flex instead of Flex, margin-bottom instead of
+      Space), that is a defect. When the code uses className on an antd v6
+      component instead of the styles/classNames API, that is a defect. When
+      inline styles appear on antd components, that is a defect. Read the
+      conventions grounding file and attack every violation you find.
+
+  - role: maintainer
+    role_type: challenger
+    prompt_register: "a Next.js developer inheriting this codebase who has never spoken to the original author"
+    prompt: >
+      You read this code as someone who will maintain it in 6 months. Can you
+      tell which Ant Design components are being used and why? Are the layout
+      patterns obvious — would you know whether to use Flex, Space, Row/Col, or
+      Layout for a new section? Are there wrapper divs that obscure the component
+      hierarchy? Would you be afraid to change the styling because you cannot
+      tell what comes from the design system and what is hand-rolled?
+
+  - role: convention_enforcer
+    role_type: auditor
+    grounding: ".docs/antd-v6-conventions.md"
+    prompt: >
+      Systematically check every component usage, style value, CSS pattern, and
+      import against the conventions document. For each convention: pass, fail,
+      or not applicable. Cite the specific line that violates or satisfies each
+      rule. Your report is factual — you do not argue, you audit.
+
+rules:
+  max_rounds: 2
+  independent_positions: true
+  require_dissent_record: true
+  human_deferral: false
+
+output:
+  include_transcript: true
+  include_provenance: true
