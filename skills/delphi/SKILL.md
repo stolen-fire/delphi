@@ -1253,6 +1253,7 @@ Write `{docket-path}/proposition.md`:
 **Review type:** {files | diff}
 **Files:** {comma-separated list of file paths}
 **Conventions:** {conventions file path, or "none"}
+**Code snapshot:** `{docket-path}/code-under-review/`
 
 ## Proposition
 
@@ -1262,10 +1263,20 @@ Critic will challenge its correctness and robustness. The Maintainer will
 evaluate its comprehensibility and modification safety.
 {If conventions: "The Enforcer will audit against stated conventions."}
 
+## Files to review
+
+{for each file in code-under-review/:}
+- `{docket-path}/code-under-review/{filename}` (source: `{original-path}`)
+{/for}
+
 ## Code under review
 
-{review_artifact content — the assembled code/diff}
+{review_artifact content — the assembled code/diff, FULL AND UNABRIDGED}
 ```
+
+**Anti-abbreviation rule:** The code embedded above MUST be the COMPLETE, UNABRIDGED source of every file. The engine MUST NOT truncate, abbreviate, condense, summarize, or use `[...]` placeholders for any section. Every line of every file must appear exactly as it does in the source. Opus 4.6 has a 1M context window — there is no reason to abbreviate.
+
+The `code-under-review/` file paths are also provided so delegates can use the Read tool to verify line numbers against the snapshot files.
 
 ### Step 0.6: Tone loading
 
@@ -1295,14 +1306,24 @@ You read the code under review, understand what it does, and defend the
 implementation choices. Argue like an engineering design doc — direct
 assertions backed by evidence from the actual code.
 
+{if composition provides custom advocate prompt:}
+{composition advocate prompt}
+{/if}
+
 [TONE BLOCK]
 
-## Proposition
-{contents of proposition.md}
+## Review context
+{contents of proposition.md — contains review metadata, file list, AND full unabridged code}
 
+## Line number verification
+The code is embedded above in the proposition. You may also use the Read
+tool on the files in `code-under-review/` to verify line numbers. Your
+[CITE: filename, line] markers must reference the actual source line numbers.
+
+{if conventions provided:}
 ## Conventions
-{if conventions provided: contents of conventions file}
-{if no conventions: "No conventions file provided. Evaluate against general best practices."}
+{contents of conventions file — FULL, not a path}
+{/if}
 
 ## Output format
 Follow this template exactly:
@@ -1331,22 +1352,38 @@ Output progress: `  Critic challenge...`
 ### Step 2.1: Assemble dispatch package
 
 Read the challenge template from `${CLAUDE_PLUGIN_ROOT}/templates/challenge.md`.
-Read the Advocate's position from `{docket-path}/positions/round-1/advocate.md`.
+
+**Do NOT embed the Advocate's position in this prompt.** The Critic will read it from the docket via Read tool after forming an independent assessment of the code.
 
 Assemble the Critic's dispatch prompt:
 
 ```
 You are the Critic in this code review. Your capability is challenge_all.
 
+{if composition provides custom critic prompt:}
+{composition critic prompt}
+{/if}
+
 [TONE BLOCK]
 
-## Proposition
-{contents of proposition.md}
+## Review context
+{contents of proposition.md — contains review metadata, file list, AND full unabridged code}
 
-## Position to challenge
+{if this delegate has grounding:}
+## Grounding
+{contents of grounding file — FULL}
+{/if}
 
-### Advocate's position:
-{contents of advocate.md}
+## Independent code review
+
+Read the code above. Form your OWN assessment of violations and weaknesses
+BEFORE reading the Advocate's position. Then use the Read tool to read
+the Advocate's position from the docket:
+
+  Read: `{docket-path}/positions/round-1/advocate.md`
+
+Challenge it — paying special attention to violations or concerns the
+Advocate MISSED, MINIMIZED, or MISCHARACTERIZED.
 
 ## Output format
 Follow this template exactly. You MUST use the header "## Challenges to: advocate"
@@ -1378,9 +1415,7 @@ Output progress: `  Maintainer challenge...`
 
 ### Step 3.1: Assemble dispatch package
 
-Read the Advocate's position from `{docket-path}/positions/round-1/advocate.md`.
-
-**Anti-anchoring: Do NOT read or include the Critic's challenges.**
+**Anti-anchoring: Do NOT read or include the Critic's challenges. Do NOT embed the Advocate's position in this prompt.** The Maintainer will read it from the docket via Read tool after forming an independent assessment.
 
 Assemble the Maintainer's dispatch prompt:
 
@@ -1388,15 +1423,25 @@ Assemble the Maintainer's dispatch prompt:
 You are the Maintainer in this code review. You read code as someone who
 will inherit it in 6 months with no access to the original author.
 
+{if composition provides custom maintainer prompt:}
+{composition maintainer prompt}
+{/if}
+
 [TONE BLOCK]
 
-## Proposition
-{contents of proposition.md}
+## Review context
+{contents of proposition.md — contains review metadata, file list, AND full unabridged code}
 
-## Position to challenge
+## Read as a new maintainer
 
-### Advocate's position:
-{contents of advocate.md}
+Read the code above as someone who will own it in 6 months. Note what
+confuses you, what you'd be afraid to touch, and what context is missing.
+
+Then use the Read tool to read the Advocate's position from the docket:
+
+  Read: `{docket-path}/positions/round-1/advocate.md`
+
+Challenge it based on your independent reading.
 
 ## Output format
 Structure your challenges under this exact header:
@@ -1446,13 +1491,40 @@ Assemble the Enforcer's dispatch prompt:
 ```
 You are the Enforcer in this code review. You audit code against conventions.
 
+{if composition provides custom enforcer prompt:}
+{composition enforcer prompt}
+{/if}
+
 [TONE BLOCK]
 
 ## Code under review
-{review_artifact content — the assembled code/diff}
+
+{review_artifact content — FULL AND UNABRIDGED, every line of every file}
+
+## Files for line-number verification
+
+You may also use the Read tool on these snapshot files to verify line numbers:
+{for each file in code-under-review/:}
+- `{docket-path}/code-under-review/{filename}`
+{/for}
+
+## Coverage mandate
+
+Your compliance report MUST demonstrate coverage of every file section.
+For each convention, cite specific [CITE: filename, line] markers.
+
+CRITICAL: Check every line range of every file. If a file has 75 lines,
+you must have citations spanning from the top to the bottom — not just
+the first 50 lines. Convention violations in the last third of a file
+are just as important as violations in the first third.
+
+In the "Failed conventions summary" table, every failure MUST cite the
+specific file and line number. Vague findings without line references are
+audit failures.
 
 ## Conventions to enforce
-{contents of conventions file}
+
+{contents of conventions file — FULL}
 
 ## Output format
 Follow this template exactly:
@@ -1564,6 +1636,34 @@ This phase is performed by YOU (the engine), not by a subagent.
 
 Read `{docket-path}/responses/round-1/advocate.md`.
 If Enforcer ran: read `{docket-path}/compliance/enforcer-report.md`.
+
+### Step 6.1b: Verify citation coverage
+
+Build a citation coverage map to catch file sections that all delegates skipped.
+
+1. **Extract citations:** From ALL delegate output files (position, challenges, compliance report, responses), extract every `[CITE: filename, line]` and `[CITE: filename, line-range]` marker. Normalize filenames to match `code-under-review/` contents.
+
+2. **Build coverage map:** For each file in `code-under-review/`, read the file and record its total line count. Mark each line as "cited" if any delegate's citation covers it (exact line or within a cited range).
+
+3. **Identify gaps:** Find contiguous ranges of 10+ uncited lines in any file. These are coverage gaps — sections no delegate examined.
+
+4. **Report gaps in synthesis:** For each coverage gap, add a row to the synthesis:
+
+   | Point | Challenger | Issue | Status |
+   |-------|-----------|-------|--------|
+   | Lines {start}-{end} of {filename} | (none) | Coverage gap — no delegate cited these lines | Unreviewed |
+
+5. **Output coverage stats:**
+   ```
+     Coverage: {N} files, {total_lines} lines, {cited_lines} cited ({pct}%), {gap_count} gaps ({gap_lines} uncited lines)
+   ```
+
+   If coverage is 100% (no gaps of 10+ lines), output:
+   ```
+     Coverage: {N} files, {total_lines} lines — full coverage
+   ```
+
+   Coverage gaps are reported honestly in the review output. The engine does NOT attempt to audit gaps itself — that is delegate work, not orchestrator work. If gaps exist, the review output says so and the user decides whether to re-run.
 
 ### Step 6.2: Categorize challenge-response pairs
 

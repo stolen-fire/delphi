@@ -23,29 +23,44 @@ This document defines the rules for code-review mode. The main engine skill read
 
 ## Delegate dispatch rules
 
+### Anti-abbreviation rule
+
+The engine MUST embed FULL, UNABRIDGED source code in every dispatch prompt. NEVER truncate, abbreviate, condense, summarize, or use `[...]` placeholders. Opus 4.6 has a 1M context window — there is no reason to abbreviate. Any abbreviation of code under review is a protocol violation.
+
+File paths to `{docket-path}/code-under-review/` are also provided in every dispatch so delegates can use the Read tool to verify line numbers against the snapshot files.
+
 ### Role type dispatch contract
 
 | Role type | Phase | Input | Output |
 |-----------|-------|-------|--------|
-| `participant` | Position | Code + conventions | Position defending the code |
-| `challenger` | Challenge | Code + participant position | `## Challenges to: advocate` |
-| `auditor` | Independent | Code + grounding file | Compliance report |
+| `participant` | Position | Full code (embedded) + conventions + Read tool file paths | Position defending the code |
+| `challenger` | Challenge | Full code (embedded) + Read tool path to participant position | `## Challenges to: advocate` |
+| `auditor` | Independent | Full code (embedded) + grounding file + Read tool file paths | Compliance report with coverage mandate |
 
 ### Sequential dispatch order (quick-path)
 
-1. Advocate (participant) — reads code, writes position
-2. Critic (challenger) — reads code + advocate position, writes challenges
-3. Maintainer (challenger) — reads code + advocate position (NOT critic), writes challenges
-4. Enforcer (auditor, conditional) — reads code + conventions, writes compliance report
+1. Advocate (participant) — receives full code in prompt, writes position
+2. Critic (challenger) — receives full code in prompt, reads advocate position from docket via Read tool, writes challenges
+3. Maintainer (challenger) — receives full code in prompt, reads advocate position from docket via Read tool (NOT critic), writes challenges
+4. Enforcer (auditor, conditional) — receives full code in prompt + conventions, writes compliance report with coverage mandate
 5. Advocate (participant) — responds to Critic + Maintainer challenges
-6. Engine — synthesis + remediation plan
+6. Engine — coverage verification + synthesis + remediation plan
 
 ### Anti-anchoring
 
-- Critic and Maintainer each read the Advocate's position independently
+- Challengers receive full code but NOT the Advocate's position in their dispatch prompt
+- Challengers read the Advocate's position from the docket via Read tool AFTER forming their independent assessment
 - Neither challenger reads the other's challenges
 - Enforcer reads only the code and conventions — no positions or challenges
 - Independent findings that converge across challengers are a strong signal
+
+### Coverage verification
+
+After all delegates complete, the engine builds a citation coverage map from all `[CITE: filename, line]` markers across all delegate outputs. Any contiguous range of 10+ lines with zero citations is a coverage gap. Gaps are reported in the synthesis — the engine does not attempt to audit them itself.
+
+### Enforcer coverage mandate
+
+The Enforcer must cite findings (pass, fail, or N/A) spanning every section of every reviewed file. Coverage that drops off partway through a file is an audit failure. The dispatch prompt explicitly instructs: "Check every line range of every file."
 
 ## Remediation plan generation
 
