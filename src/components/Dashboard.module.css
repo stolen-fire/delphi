@@ -1,0 +1,74 @@
+/* Dashboard.module.css */
+
+.cardWrapper {
+  /* [V8 companion] unnecessary wrapper div styling */
+  position: relative;
+}
+
+.metricHeader {
+  display: flex;          /* [V-css1] display:flex instead of Flex component */
+  align-items: center;
+  gap: 8px;               /* [V-css2] hardcoded gap instead of Space */
+  margin-bottom: 12px;
+}
+
+.dangerBtn {
+  background: none;
+  border: 1px solid #ff4d4f;   /* [V-css3] hardcoded colorError */
+  color: #ff4d4f;              /* [V-css4] hardcoded colorError */
+  border-radius: 6px;          /* [V-css5] hardcoded borderRadius */
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.dangerBtn:hover {
+  background: #fff1f0;
+  color: #cf1322;
+}
+
+/* [V-css6] overriding .ant-* selectors — forbidden pattern 5c */
+.projectTable :global(.ant-table-thead > tr > th) {
+  background: #fafafa !important;   /* [V-css7] !important — forbidden pattern 5d */
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.projectTable :global(.ant-table-row:hover > td) {
+  background: #e6f4ff !important;   /* [V-css8] !important + .ant-* override */
+}
+
+/* [V-css9] overriding .ant-modal-* — forbidden pattern 5c */
+.filterModal :global(.ant-modal-header) {
+  border-bottom: 2px solid #1677ff;  /* [V-css10] hardcoded colorPrimary */
+}
+
+.filterModal :global(.ant-modal-body) {
+  padding: 24px 32px;                /* [V-css11] should use styles prop on Modal */
+}
+
+.formRow {
+  display: flex;                     /* [V-css12] flex instead of Flex/Form.Item */
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.formRow label {
+  font-weight: 500;
+  min-width: 80px;
+  font-size: 14px;                   /* [V-css13] hardcoded fontSize */
+}
+
+.dateInput {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;               /* [V-css14] hardcoded borderRadius */
+  padding: 4px 11px;
+  font-size: 14px;                   /* [V-css15] hardcoded fontSize */
+  outline: none;
+}
+
+.dateInput:focus {
+  border-color: #1677ff;            /* [V-css16] hardcoded colorPrimary */
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}

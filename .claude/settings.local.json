@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pwsh -File \"C:\\\\Users\\\\sdoherty\\\\.claude\\\\scripts\\\\new-remote-session.ps1\" -Name \"caladrius-onboarding\" -WorkDir \"D:\\\\Projects\\\\caladrius-onboarding\")",
+      "Bash(tasklist)",
+      "Bash(pwsh -Command \"Start-Process wt -ArgumentList 'new-tab -d \\\\\"D:\\\\Projects\\\\caladrius-onboarding\\\\\" -- claude remote-control'\")",
+      "Bash(mkdir -p \"C:/Users/sdoherty/.claude/skills/error-taxonomy-workspace/iteration-1/explicit-logging/with_skill/outputs\")",
+      "Bash(mkdir -p \"C:/Users/sdoherty/.claude/skills/error-taxonomy-workspace/iteration-1/explicit-logging/without_skill/outputs\")",
+      "Bash(mkdir -p \"C:/Users/sdoherty/.claude/skills/error-taxonomy-workspace/iteration-1/unknown-root-cause/with_skill/outputs\")",
+      "Bash(mkdir -p \"C:/Users/sdoherty/.claude/skills/error-taxonomy-workspace/iteration-1/unknown-root-cause/without_skill/outputs\")",
+      "Bash(mkdir -p \"C:/Users/sdoherty/.claude/skills/error-taxonomy-workspace/iteration-1/batch-logging/with_skill/outputs\")",
+      "Bash(kill 1981)",
+      "Bash(zip -r /tmp/error-taxonomy.zip error-taxonomy/)",
+      "Bash(pwsh -Command \"Compress-Archive -Path ''error-taxonomy/*'' -DestinationPath ''C:/Users/sdoherty/AppData/Local/Temp/error-taxonomy.zip'' -Force\")"
+    ]
+  }
+}
