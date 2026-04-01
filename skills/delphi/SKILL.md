@@ -1177,9 +1177,9 @@ If still contested after max_rounds, apply terminal behavior per rules (deferred
 
 # Code Review Protocol
 
-Use this protocol when mode is code-review (invoked from `/delphi-review` command, or YAML composition with `mode: code-review`). Sequential dispatch with 3 default delegates + conditional Enforcer.
+Use this protocol when mode is code-review (invoked from `/delphi-review` command, or YAML composition with `mode: code-review`). Sequential dispatch with lint pre-phase, Cartographer, 3 default delegates, and conditional Enforcer.
 
-Read the protocol reference at `${CLAUDE_PLUGIN_ROOT}/skills/code-review-deliberation/SKILL.md` for rules on delegate dispatch contracts, anti-anchoring, and remediation plan generation.
+Read the protocol reference at `${CLAUDE_PLUGIN_ROOT}/skills/code-review-deliberation/SKILL.md` for rules on delegate dispatch contracts, lint pre-phase, Cartographer dispatch, anti-anchoring, and remediation plan generation.
 
 ---
 
@@ -1203,12 +1203,13 @@ Use the hardcoded roster:
 
 | Role | Agent | Role type |
 |------|-------|-----------|
+| cartographer | `deliberation-cartographer` | challenger |
 | advocate | `deliberation-advocate` | participant |
 | critic | `deliberation-critic` | challenger |
 | maintainer | `deliberation-maintainer` | challenger |
 | enforcer (conditional) | `deliberation-enforcer` | auditor |
 
-The Enforcer is included ONLY when conventions are provided.
+The Cartographer is always included. The Enforcer is included ONLY when `enforcer_active = true` (see Step 0.4a).
 
 **Composition path:**
 Read the YAML delegate list. For each delegate:
@@ -1243,6 +1244,50 @@ Copy each reviewed file to `{docket-path}/code-under-review/`:
 
 This makes the docket self-contained — the review is reproducible even if source files change.
 
+### Step 0.4a: Lint pre-phase
+
+This is ENGINE LOGIC — not a subagent dispatch. The engine auto-detects and runs linters before any delegate dispatch.
+
+**1. Detect linters:** Inspect file extensions of `review_files` and use Glob tool to search for linter configs in the project:
+
+| File extensions | Linter | Config files searched |
+|----------------|--------|---------------------|
+| `.ts`, `.tsx`, `.js`, `.jsx` | ESLint | `eslint.config.*`, `.eslintrc.*` |
+| `.css`, `.module.css` | Stylelint | `stylelint.config.*`, `.stylelintrc.*` |
+| `.cs` | Roslyn Analyzers | `.editorconfig`, `Directory.Build.props`, `.globalconfig` |
+
+**2. Composition override:** If composition YAML sets `lint.enabled: false`, skip this step entirely.
+
+**3. Run linters:** If configs found, run linters via Bash:
+
+```bash
+eslint_d {files} --format json 2>/dev/null || npx eslint {files} --format json
+npx stylelint {files} --cache --formatter json
+dotnet build --no-restore -warnaserror- 2>&1
+```
+
+**Failure handling:** Lint is best-effort. If a linter command fails, warn and proceed without lint findings. Do NOT fall back to Enforcer on lint failure (failure to lint ≠ no lint config).
+
+**4. Parse output:** Parse JSON output into a normalized markdown table:
+
+```markdown
+## Lint findings
+| # | File | Line | Rule | Severity | Message |
+|---|------|------|------|----------|---------|
+Total: {N} errors, {M} warnings
+```
+
+**5. Determine Enforcer path:**
+
+| Condition | `enforcer_active` |
+|-----------|-------------------|
+| Lint findings collected (linter config found and ran) | `false` — lint replaces the Enforcer |
+| No linter config + conventions provided | `true` — Enforcer is the LLM fallback |
+| No linter config + no conventions | `false` — skip convention checking entirely |
+| Composition explicitly lists enforcer in delegates | `true` — backward compatibility |
+
+**6. Output progress:** `  Lint: {N} errors, {M} warnings ({tools})` or `  Lint: no linter config detected`
+
 ### Step 0.5: Write proposition
 
 Write `{docket-path}/proposition.md`:
@@ -1258,10 +1303,11 @@ Write `{docket-path}/proposition.md`:
 ## Proposition
 
 Review the following code for quality, correctness, maintainability, and
-convention compliance. The Advocate will defend the implementation. The
-Critic will challenge its correctness and robustness. The Maintainer will
-evaluate its comprehensibility and modification safety.
-{If conventions: "The Enforcer will audit against stated conventions."}
+convention compliance. The Cartographer will map component library coverage.
+The Advocate will defend the implementation. The Critic will challenge its
+correctness and robustness. The Maintainer will evaluate its comprehensibility
+and modification safety.
+{If enforcer_active: "The Enforcer will audit against stated conventions."}
 
 ## Files to review
 
@@ -1272,6 +1318,11 @@ evaluate its comprehensibility and modification safety.
 ## Code under review
 
 {review_artifact content — the assembled code/diff, FULL AND UNABRIDGED}
+
+{if lint findings collected:}
+## Lint findings
+{normalized lint findings table from Step 0.4a}
+{/if}
 ```
 
 **Anti-abbreviation rule:** The code embedded above MUST be the COMPLETE, UNABRIDGED source of every file. The engine MUST NOT truncate, abbreviate, condense, summarize, or use `[...]` placeholders for any section. Every line of every file must appear exactly as it does in the source. Opus 4.6 has a 1M context window — there is no reason to abbreviate.
@@ -1287,12 +1338,71 @@ If a tone was provided, load it using the same resolution precedence as Standard
 
 ---
 
-## Review Phase 1: Advocate position
+## Review Phase 1: Cartographer analysis
 
 Output progress: `Code review: {slug}`
-Output progress: `  Advocate position...`
+Output progress: `  Cartographer analysis...`
 
 ### Step 1.1: Assemble dispatch package
+
+Read the Replacement Map template from `${CLAUDE_PLUGIN_ROOT}/templates/replacement-map.md`.
+
+Assemble the Cartographer's dispatch prompt:
+
+```
+You are the Cartographer in this code review. You know the map of the
+component library and identify when the developer built a road where a
+highway already goes.
+
+{if composition provides custom cartographer prompt:}
+{composition cartographer prompt}
+{/if}
+
+[TONE BLOCK]
+
+## Review context
+{contents of proposition.md — contains review metadata, file list, full unabridged code, AND lint findings if available}
+
+{if grounding file provided via composition grounding: field:}
+## Component library reference
+{contents of grounding file — FULL}
+{/if}
+
+{if conventions provided:}
+## Conventions
+{contents of conventions file — FULL}
+{/if}
+
+## Your task
+Read the code. For each functional block, ask: "What is this trying to do,
+and does the component library already do that?" Look for component
+replacements, variant corrections, sub-component opportunities. Use lint
+violation clusters as signals — a block of code with 8 lint violations is
+more likely to be a reimplementation than a block with 0.
+
+## Output format
+Follow this template exactly:
+{contents of Replacement Map template}
+
+## CRITICAL: Write your output to this exact file path
+Write your complete Cartographer report to: {docket-path}/challenges/round-1-cartographer.md
+
+Do not write to any other path. Do not output anything else.
+```
+
+### Step 1.2: Dispatch cartographer subagent
+
+Dispatch a subagent with the assembled prompt. Use the `deliberation-cartographer` agent definition.
+
+Output progress: `  Cartographer analysis... done`
+
+---
+
+## Review Phase 2: Advocate position
+
+Output progress: `  Advocate position...`
+
+### Step 2.1: Assemble dispatch package
 
 Read the position template from `${CLAUDE_PLUGIN_ROOT}/templates/position.md`.
 
@@ -1325,6 +1435,13 @@ tool on the files in `code-under-review/` to verify line numbers. Your
 {contents of conventions file — FULL, not a path}
 {/if}
 
+{if Cartographer ran:}
+## Cartographer findings
+The Cartographer has identified component replacement proposals. Read them:
+  Read: `{docket-path}/challenges/round-1-cartographer.md`
+You must address each Cartographer challenge in your position or response phase.
+{/if}
+
 ## Output format
 Follow this template exactly:
 {contents of position template}
@@ -1337,7 +1454,7 @@ Write your complete position to: {docket-path}/positions/round-1/advocate.md
 Do not write to any other path. Do not output anything else.
 ```
 
-### Step 1.2: Dispatch advocate subagent
+### Step 2.2: Dispatch advocate subagent
 
 Dispatch a subagent with the assembled prompt. Use the `deliberation-advocate` agent definition.
 
@@ -1345,11 +1462,11 @@ Output progress: `  Advocate position... done`
 
 ---
 
-## Review Phase 2: Critic challenge
+## Review Phase 3: Critic challenge
 
 Output progress: `  Critic challenge...`
 
-### Step 2.1: Assemble dispatch package
+### Step 3.1: Assemble dispatch package
 
 Read the challenge template from `${CLAUDE_PLUGIN_ROOT}/templates/challenge.md`.
 
@@ -1401,7 +1518,7 @@ Write your complete challenge document to: {docket-path}/challenges/round-1-crit
 Do not write to any other path. Do not output anything else.
 ```
 
-### Step 2.2: Dispatch critic subagent
+### Step 3.2: Dispatch critic subagent
 
 Dispatch using the `deliberation-critic` agent definition.
 
@@ -1409,13 +1526,13 @@ Output progress: `  Critic challenge... done`
 
 ---
 
-## Review Phase 3: Maintainer challenge
+## Review Phase 4: Maintainer challenge
 
 Output progress: `  Maintainer challenge...`
 
-### Step 3.1: Assemble dispatch package
+### Step 4.1: Assemble dispatch package
 
-**Anti-anchoring: Do NOT read or include the Critic's challenges. Do NOT embed the Advocate's position in this prompt.** The Maintainer will read it from the docket via Read tool after forming an independent assessment.
+**Anti-anchoring: Do NOT read or include the Critic's challenges or Cartographer findings. Do NOT embed the Advocate's position in this prompt.** The Maintainer will read it from the docket via Read tool after forming an independent assessment.
 
 Assemble the Maintainer's dispatch prompt:
 
@@ -1468,7 +1585,7 @@ Write your complete challenge document to: {docket-path}/challenges/round-1-main
 Do not write to any other path. Do not output anything else.
 ```
 
-### Step 3.2: Dispatch maintainer subagent
+### Step 4.2: Dispatch maintainer subagent
 
 Dispatch using the `deliberation-maintainer` agent definition.
 
@@ -1476,13 +1593,14 @@ Output progress: `  Maintainer challenge... done`
 
 ---
 
-## Review Phase 4: Enforcer compliance report (conditional)
+## Review Phase 4b: Enforcer compliance report (conditional)
 
-**Skip this phase entirely if no conventions were provided.**
+**This phase runs ONLY when `enforcer_active = true`.**
+**Skip this phase if lint findings were collected — lint replaces the Enforcer.**
 
 Output progress: `  Enforcer compliance check...`
 
-### Step 4.1: Assemble dispatch package
+### Step 4b.1: Assemble dispatch package
 
 Read the compliance report template from `${CLAUDE_PLUGIN_ROOT}/templates/compliance-report.md`.
 
@@ -1536,7 +1654,7 @@ Write your complete compliance report to: {docket-path}/compliance/enforcer-repo
 Do not write to any other path. Do not output anything else.
 ```
 
-### Step 4.2: Dispatch enforcer subagent
+### Step 4b.2: Dispatch enforcer subagent
 
 Dispatch using the `deliberation-enforcer` agent definition.
 
@@ -1550,8 +1668,9 @@ Output progress: `  Enforcer compliance check... done`
 
 Output progress: `  Advocate response...`
 
-### Step 5.1: Extract challenges from both challengers
+### Step 5.1: Extract challenges from all challengers
 
+Read `{docket-path}/challenges/round-1-cartographer.md`. Extract the section under `## Challenges to: advocate`.
 Read `{docket-path}/challenges/round-1-critic.md`. Extract the section under `## Challenges to: advocate`.
 Read `{docket-path}/challenges/round-1-maintainer.md`. Extract the section under `## Challenges to: advocate`.
 
@@ -1559,7 +1678,7 @@ Read `{docket-path}/challenges/round-1-maintainer.md`. Extract the section under
 
 ```
 You are the Advocate. You are responding to adversarial challenges from
-the Critic and the Maintainer.
+the Cartographer, the Critic, and the Maintainer.
 
 [TONE BLOCK]
 
@@ -1567,6 +1686,9 @@ the Critic and the Maintainer.
 {contents of positions/round-1/advocate.md}
 
 ## Challenges directed at you
+
+### From Cartographer:
+{extracted cartographer challenges}
 
 ### From Critic:
 {extracted challenges from critic}
@@ -1601,8 +1723,12 @@ Available actions:
   that removing it would create duplication across 3 call sites that will
   diverge over time.
 
-Respond to EVERY challenge from BOTH the Critic and the Maintainer. Use
-clear headers to organize your responses:
+Respond to EVERY challenge from the Cartographer, the Critic, and the
+Maintainer. Use clear headers to organize your responses:
+
+### Response to Cartographer
+
+[responses with action tags]
 
 ### Response to Critic
 
@@ -1634,6 +1760,7 @@ This phase is performed by YOU (the engine), not by a subagent.
 
 ### Step 6.1: Read all files
 
+Read `{docket-path}/challenges/round-1-cartographer.md`.
 Read `{docket-path}/responses/round-1/advocate.md`.
 If Enforcer ran: read `{docket-path}/compliance/enforcer-report.md`.
 
@@ -1667,12 +1794,31 @@ Build a citation coverage map to catch file sections that all delegates skipped.
 
 ### Step 6.2: Categorize challenge-response pairs
 
-For each challenge from the Critic and Maintainer, find the Advocate's corresponding response and categorize using the **challenge-response categorization rules** defined in the shared engine rules above.
+For each challenge from the Cartographer, Critic, and Maintainer, find the Advocate's corresponding response and categorize using the **challenge-response categorization rules** defined in the shared engine rules above.
 
 ### Step 6.3: Write synthesis
 
 Read the synthesis template from `${CLAUDE_PLUGIN_ROOT}/templates/synthesis.md`.
 Fill in the tables. Write to `{docket-path}/synthesis/round-1.md`.
+
+Append convention checking status:
+
+```
+## Convention checking
+{if lint findings collected: "Lint: {N} errors, {M} warnings ({tools})"}
+{if Enforcer ran: "Enforcer: {N} checked, {pass} pass, {fail} fail"}
+{if neither: "Skipped — no linter config detected and no conventions provided"}
+```
+
+Append Cartographer summary:
+
+```
+## Cartographer findings
+- Component replacements proposed: {N}
+- Variant corrections proposed: {N}
+- Sub-component opportunities proposed: {N}
+- Total violations eliminable: {N}
+```
 
 If Enforcer ran, append to the synthesis:
 
@@ -1702,17 +1848,22 @@ Output progress: `  Generating remediation plan...`
 
 ### Step 7.1: Collect findings
 
-From the synthesis and compliance report, build a findings list:
+From the synthesis, lint findings, Cartographer report, and compliance report, build a findings list:
 
 **Critical findings:**
+- Every lint error
+- Every Cartographer replacement/variant/sub-component where Advocate conceded or was contested (in "Component replacements" section — include "eliminates {N} violations" metric)
 - Every contested point (Advocate's defense was unsupported or absent)
 - Every `[ACTION: CONCEDE]` from the Advocate
-- Every failure in the Enforcer's compliance report
+- Every failure in the Enforcer's compliance report (if Enforcer ran)
 
 **Recommended findings:**
+- Every lint warning
+- Every Cartographer finding where Advocate dissented
 - Every `[ACTION: DISSENT]` from the Advocate
 
 **Optional findings:**
+- Every Cartographer finding where Advocate defended with evidence
 - Every `[ACTION: DEFEND]` with self-referential `[CITE:]` (flagged in synthesis)
 - Successfully defended points where the Maintainer raised the concern (awareness items)
 
@@ -1762,6 +1913,20 @@ Write `{docket-path}/docket.json`:
     "independent_challenges": true,
     "enforcer_active": "{true | false}"
   },
+  "lint": {
+    "detected": true,
+    "tools": ["eslint", "stylelint"],
+    "errors": "{N}",
+    "warnings": "{M}"
+  },
+  "cartographer": {
+    "replacements_proposed": "{N}",
+    "variant_corrections": "{N}",
+    "subcomponent_opportunities": "{N}",
+    "violations_eliminable": "{N}",
+    "advocate_conceded": "{N}",
+    "advocate_defended": "{N}"
+  },
   "outcome": "{clean | findings}",
   "remediation": {
     "critical": "{count}",
@@ -1779,6 +1944,8 @@ Write `{docket-path}/docket.json`:
 }
 ```
 
+**Omission rules:** Omit the `lint` block if no linter config was detected. Omit the `cartographer` block if the Cartographer did not run (e.g., composition overrides without a cartographer delegate).
+
 ### Step 8.2: Present results
 
 Output progress: `  Docket: .deliberation/dockets/{docket-name}/`
@@ -1794,7 +1961,13 @@ Present a summary to the user:
 - Settled (code defended): {N}
 - Contested (defense failed): {N}
 - Conceded (advocate agreed): {N}
-- Convention failures: {N} (if Enforcer ran)
+{if lint ran:}
+- Lint: {N} errors, {M} warnings ({tools})
+{/if}
+- Cartographer: {N} replacements, {M} variant corrections, {K} sub-component opportunities
+{if Enforcer ran:}
+- Convention failures: {N}
+{/if}
 
 ### Remediation plan
 {If findings: display contents of remediation/plan.md}
