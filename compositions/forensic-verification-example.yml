@@ -1,0 +1,36 @@
+name: forensic-verification-example
+mode: forensic-verification
+
+delegates:
+  - role: verifier-forward
+    role_type: auditor
+    prompt: >
+      Verification strategy: FORWARD. Read each file cited in the assertion,
+      find the employee row, and report the actual values you see. Confirm if
+      they match the claim. Dispute if they do not.
+
+  - role: verifier-reverse
+    role_type: auditor
+    prompt: >
+      Verification strategy: REVERSE. Start from the falsifiable_by instruction
+      on each assertion. Actively try to disprove the claim — look for the
+      evidence it says would falsify it. If you find falsifying evidence, dispute.
+      If you cannot find it despite thorough searching, confirm.
+
+  - role: verifier-cross
+    role_type: auditor
+    prompt: >
+      Verification strategy: CROSS. For each employee+benefit combination in
+      the assertion, check values across ALL files in the evidence index — not
+      just the ones the assertion cites. Look for inconsistencies between files,
+      timeline gaps, or files the audit skipped that contain relevant data.
+
+rules:
+  max_rounds: 1
+  independent_positions: true
+  require_dissent_record: false
+  human_deferral: false
+
+output:
+  include_transcript: true
+  include_provenance: true
