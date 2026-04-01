@@ -13,11 +13,12 @@ This document defines the rules for code-review mode. The main engine skill read
 
 ## Mode characteristics
 
-- **Delegates:** 3 default (Advocate, Critic, Maintainer) + conditional Enforcer
-- **Dispatch:** Sequential — each phase depends on prior output except Enforcer (independent)
-- **Independent challenges:** Yes. Critic and Maintainer do not read each other's output (anti-anchoring)
-- **Enforcer:** Conditional — activated only when `--conventions` is provided or composition includes an auditor-type delegate with grounding
-- **Remediation plan:** Always generated — engine builds actionable plan from synthesis + compliance findings
+- **Delegates:** 3 default (Advocate, Critic, Maintainer) + Cartographer (always) + conditional Enforcer
+- **Lint pre-phase:** Engine auto-detects and runs linters before delegate dispatch. Lint replaces Enforcer as default convention checker.
+- **Dispatch:** Sequential — Cartographer first (after lint), then Advocate, then challengers independently
+- **Independent challenges:** Yes. Critic and Maintainer do not read each other's output (anti-anchoring). Cartographer does not read Advocate position.
+- **Enforcer:** Fallback only — activated when no linter config detected AND `--conventions` is provided
+- **Remediation plan:** Always generated — engine builds actionable plan from lint findings + synthesis + Cartographer findings + compliance findings
 - **Max rounds:** 1 for quick-path, configurable via composition
 - **Code snapshot:** Input files/diff copied to `code-under-review/` for docket reproducibility
 
@@ -33,18 +34,21 @@ File paths to `{docket-path}/code-under-review/` are also provided in every disp
 
 | Role type | Phase | Input | Output |
 |-----------|-------|-------|--------|
-| `participant` | Position | Full code (embedded) + conventions + Read tool file paths | Position defending the code |
-| `challenger` | Challenge | Full code (embedded) + Read tool path to participant position | `## Challenges to: advocate` |
-| `auditor` | Independent | Full code (embedded) + grounding file + Read tool file paths | Compliance report with coverage mandate |
+| `participant` | Position | Full code (embedded) + lint findings + conventions + Cartographer findings + Read tool file paths | Position defending the code |
+| `challenger` (Cartographer) | Pre-position challenge | Full code (embedded) + lint findings + grounding file (if provided) | Replacement Map with `## Challenges to: advocate` |
+| `challenger` (Critic/Maintainer) | Post-position challenge | Full code (embedded) + lint findings + Read tool path to participant position | `## Challenges to: advocate` |
+| `auditor` | Independent (fallback) | Full code (embedded) + grounding file + Read tool file paths | Compliance report with coverage mandate |
 
 ### Sequential dispatch order (quick-path)
 
-1. Advocate (participant) — receives full code in prompt, writes position
-2. Critic (challenger) — receives full code in prompt, reads advocate position from docket via Read tool, writes challenges
-3. Maintainer (challenger) — receives full code in prompt, reads advocate position from docket via Read tool (NOT critic), writes challenges
-4. Enforcer (auditor, conditional) — receives full code in prompt + conventions, writes compliance report with coverage mandate
-5. Advocate (participant) — responds to Critic + Maintainer challenges
-6. Engine — coverage verification + synthesis + remediation plan
+1. Engine — lint pre-phase (auto-detect linters, run, embed findings in proposition)
+2. Engine — Enforcer fallback decision (if no linter config AND conventions provided → dispatch Enforcer)
+3. Cartographer (challenger) — receives full code + lint findings in prompt, writes Replacement Map with challenges
+4. Advocate (participant) — receives full code + lint findings + Cartographer challenges in prompt, writes position
+5. Critic (challenger) — receives full code + lint findings in prompt, reads Advocate position from docket via Read tool, writes challenges
+6. Maintainer (challenger) — receives full code + lint findings in prompt, reads Advocate position from docket via Read tool (NOT Critic or Cartographer), writes challenges
+7. Advocate (participant) — responds to Cartographer + Critic + Maintainer challenges
+8. Engine — coverage verification + synthesis + remediation plan
 
 ### Anti-anchoring
 
@@ -53,6 +57,41 @@ File paths to `{docket-path}/code-under-review/` are also provided in every disp
 - Neither challenger reads the other's challenges
 - Enforcer reads only the code and conventions — no positions or challenges
 - Independent findings that converge across challengers are a strong signal
+
+### Lint pre-phase rules
+
+The engine detects and runs linters as engine logic (not a subagent) before any delegate dispatch.
+
+**Detection:** Inspect file extensions of code under review and search for linter configs:
+
+| File extensions | Linter | Config files searched |
+|----------------|--------|---------------------|
+| `.ts`, `.tsx`, `.js`, `.jsx` | ESLint | `eslint.config.*`, `.eslintrc.*`, `package.json` (eslintConfig field) |
+| `.css`, `.module.css` | Stylelint | `stylelint.config.*`, `.stylelintrc.*` |
+| `.cs` | Roslyn Analyzers | `.editorconfig`, `Directory.Build.props`, `.globalconfig` |
+
+**Execution:** Run detected linters via Bash, parse JSON output into normalized findings table.
+
+**Decision tree:**
+- Linter config found → run linter → embed findings in proposition → skip Enforcer
+- No linter config + conventions provided → dispatch Enforcer (LLM fallback)
+- No linter config + no conventions → skip convention checking, note in synthesis
+
+**Failure handling:** Lint is best-effort. If a linter command fails, warn and proceed without lint findings. Do NOT fall back to Enforcer on lint failure (failure to lint ≠ no lint config).
+
+**Composition override:** If composition YAML sets `lint.enabled: false`, skip lint and use the Enforcer path even if linter config exists.
+
+### Cartographer dispatch contract
+
+The Cartographer is a `challenger` that runs AFTER lint findings are known and BEFORE the Advocate takes a position. It does not read the Advocate's position — it forms an independent assessment of component selection.
+
+**Input:** Full code (embedded) + lint findings (if available) + grounding file (if provided via composition `grounding:` field) + conventions doc (if provided)
+
+**Output:** Replacement Map written to `{docket-path}/challenges/round-1-cartographer.md` — contains component replacements, variant corrections, sub-component opportunities, and a `## Challenges to: advocate` section.
+
+**Anti-anchoring:** The Cartographer does NOT read the Advocate's position (the Advocate hasn't written one yet). The Cartographer does NOT read Critic or Maintainer output (they haven't run yet).
+
+**Adversarial cycle:** The Advocate receives Cartographer challenges in their position prompt (not via Read tool — the Cartographer runs before the Advocate). The Advocate must DEFEND, CONCEDE, or DISSENT against each Cartographer challenge in their response phase (Phase 7, alongside Critic and Maintainer responses).
 
 ### Coverage verification
 
@@ -70,9 +109,16 @@ The engine (not a subagent) builds `remediation/plan.md` after synthesis:
 
 | Source | Priority |
 |--------|----------|
+| Lint errors | Critical |
+| Lint warnings | Recommended |
+| Cartographer replacement — Advocate conceded or contested | Critical |
+| Cartographer variant correction — Advocate conceded or contested | Critical |
+| Cartographer sub-component opportunity — Advocate conceded or contested | Critical |
+| Cartographer finding — Advocate dissented | Recommended |
+| Cartographer finding — Advocate defended with evidence | Optional |
+| Enforcer failures (fallback path only) | Critical |
 | Contested points (no defense or unsupported defense) | Critical |
 | `[ACTION: CONCEDE]` by Advocate | Critical or Recommended |
-| Enforcer failures (convention violation) | Critical |
 | `[ACTION: DISSENT]` by Advocate | Recommended |
 | Defended with self-referential `[CITE:]` | Optional |
 | Successfully defended but Maintainer-flagged | Optional |
