@@ -23,11 +23,13 @@ When invoked, you receive either:
 
 - If you received an inline question with no `--config`: use the **hardcoded lightweight composition** defined in the lightweight-deliberation protocol reference at `${CLAUDE_PLUGIN_ROOT}/skills/lightweight-deliberation/SKILL.md`. If a `--tone` flag was provided, load the tone file using the resolution precedence described in Standard Phase 0 > Tone loading. The loaded tone is injected into all lightweight dispatch prompts. Proceed to **Lightweight Protocol** below.
 - If you received a `mode: code-review` signal (invoked from `/delphi-review`): proceed to **Code Review Protocol** below. If a `--tone` flag was provided, load the tone file using the resolution precedence described in Standard Phase 0 > Tone loading.
+- If you received a `mode: forensic-verification` signal (invoked from `/delphi-audit`): proceed to **Forensic Verification Protocol** below. If a `--tone` flag was provided, load the tone file using the resolution precedence described in Standard Phase 0 > Tone loading.
 - If you received a `--config` path: read the YAML file, extract `mode:` field
   - If a `--tone` flag was provided, it overrides any `tone` field in the composition YAML
   - If `mode: lightweight` (or 2 delegates): proceed to **Lightweight Protocol** below
   - If a tone is set (from `--tone` flag or composition YAML), load the tone file using the resolution precedence described in Standard Phase 0 > Tone loading. The loaded tone is injected into all lightweight dispatch prompts.
   - If `mode: code-review`: proceed to **Code Review Protocol** below
+  - If `mode: forensic-verification`: proceed to **Forensic Verification Protocol** below
   - If `mode: standard` (or 3+ delegates): proceed to **Standard Protocol** below
 
 ### Step 0.2: Create docket directory
