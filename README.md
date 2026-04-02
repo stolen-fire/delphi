@@ -152,17 +152,45 @@ Multiple delegates with independent positions, a Chair agent for procedural faci
 
 ### Code review
 
-Adversarial code review with distinct perspectives — an Advocate defends the code, a Critic attacks it, a Maintainer reads it as someone inheriting the codebase in 6 months, and an optional Enforcer audits against a conventions document.
+Adversarial code review with five distinct perspectives. A **Cartographer** identifies hand-rolled code that duplicates library components, an **Advocate** defends the implementation choices, a **Critic** attacks every position, a **Maintainer** reads the code as someone inheriting it in 6 months, and an **Enforcer** audits against a conventions document when no linter is available.
 
 ```
 /delphi-review src/components/*.tsx
 /delphi-review --diff HEAD~3
 /delphi-review --conventions RULES.md src/*.tsx
+/delphi-review --config review.yml src/*.tsx
+/delphi-review --tone snarky src/Foo.tsx
 ```
 
-- Sequential dispatch with anti-anchoring (challengers form independent assessments)
-- Full unabridged code embedded in every dispatch prompt
-- Produces a prioritized remediation plan (Critical / Recommended / Optional)
+**Delegates and dispatch order:**
+
+1. **Lint pre-phase** — auto-detects linters (ESLint, Stylelint, Roslyn) from file extensions and config files, runs them, and feeds structured findings to all downstream delegates
+2. **Cartographer** — scans for component replacements, variant corrections, and sub-component opportunities; uses lint violation clusters as signals for likely reimplementations; sources knowledge from MCP servers, grounding files, or training data
+3. **Advocate** — defends the code like an engineering design doc, receiving Cartographer challenges directly
+4. **Critic** — attacks weakest claims, untested assumptions, and constructs concrete failure scenarios
+5. **Maintainer** — evaluates naming clarity, abstraction quality, modification safety, and missing context
+6. **Enforcer** *(conditional)* — convention compliance auditor, activated only when no linter config is detected and `--conventions` is provided; produces a systematic pass/fail report with a coverage mandate spanning every file section
+
+**Anti-anchoring mechanisms:**
+
+- Cartographer runs *before* the Advocate exists — cannot be influenced by any position
+- Critic and Maintainer receive only the raw code in their dispatch prompt, not the Advocate's position — they must form independent assessments first, then read the Advocate's position via file to challenge it
+- Neither challenger reads the other's challenges — convergent findings across independent assessments are treated as strong signals
+- Enforcer reads only code and conventions in complete isolation
+
+**After all delegates complete:**
+
+- The Advocate must respond to every challenge from Cartographer, Critic, and Maintainer with exactly one tag: `[ACTION: DEFEND]`, `[ACTION: CONCEDE]`, or `[ACTION: DISSENT]`
+- The engine verifies citation coverage across all files — contiguous gaps of 10+ uncited lines are flagged; self-referential citations are classified separately
+- Synthesis categorizes every challenge-response pair via structural markers (not subjective judgment): defense with citation = settled, defense without citation = contested, conceded = conceded
+- Produces a prioritized **remediation plan** (Critical / Recommended / Optional) with file-line-action triples traced from `[CITE:]` markers
+
+**Additional options:**
+
+- `--diff [ref]` reviews git diffs (staged changes by default, or against a specific ref)
+- `--conventions <path>` loads a style guide for Enforcer compliance auditing
+- `--config <path.yml>` overrides the default delegate roster with a custom composition
+- `--tone <name>` applies a voice (snarky, diplomatic, adversarial, socratic, parliamentary, or custom)
 
 ### Forensic verification
 
