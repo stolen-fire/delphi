@@ -131,7 +131,7 @@ The command asks about your decision, what's at risk, and any context files — 
 
 ---
 
-## Two modes
+## Four modes
 
 ### Lightweight
 
@@ -149,6 +149,38 @@ Multiple delegates with independent positions, a Chair agent for procedural faci
 - Chair agent frames propositions and writes ratified decisions
 - Veto power for domain invariant violations
 - Human deferral when consensus is unreachable — produces a structured options package, not a cop-out
+
+### Code review
+
+Adversarial code review with distinct perspectives — an Advocate defends the code, a Critic attacks it, a Maintainer reads it as someone inheriting the codebase in 6 months, and an optional Enforcer audits against a conventions document.
+
+```
+/delphi-review src/components/*.tsx
+/delphi-review --diff HEAD~3
+/delphi-review --conventions RULES.md src/*.tsx
+```
+
+- Sequential dispatch with anti-anchoring (challengers form independent assessments)
+- Full unabridged code embedded in every dispatch prompt
+- Produces a prioritized remediation plan (Critical / Recommended / Optional)
+
+### Forensic verification
+
+Adversarial fact-checking for forensic audit findings. When an investigation produces a report claiming specific values exist in specific files, three independent verifiers read those files and confirm or dispute every factual claim.
+
+```
+/delphi-audit docs/investigations/2026-04-01-WholeLifeAudit-Findings.yaml
+```
+
+- Three verifiers dispatched in parallel, each with a different strategy:
+  - **Forward** — reads cited files and checks values match
+  - **Reverse** — starts from `falsifiable_by` instructions and tries to disprove claims
+  - **Cross** — checks values across *all* evidence files, not just the ones the audit cited
+- Consensus synthesis: 3/3 agree = confirmed, any disagreement = discrepancy escalated to user
+- Dual output: verification report in the docket + summary footer appended to the findings doc
+- Discrepancy resolution feedback log that accumulates across audits — prior patterns are surfaced as suggestions when similar discrepancies appear
+
+Designed for zero-tolerance domains where factual accuracy is non-negotiable.
 
 ---
 
@@ -211,6 +243,35 @@ rules:
   independent_positions: true    # Anti-anchoring: delegates can't see each other
   human_deferral: true           # Deadlocks produce a structured options package
   veto_roles: [domain_architect]
+```
+
+### `forensic-verification-example.yml` (forensic verification)
+
+Three verifiers with different strategies — Forward (check cited files), Reverse (try to disprove), Cross (check all files):
+
+```yaml
+delegates:
+  - role: verifier-forward
+    role_type: auditor
+    prompt: >
+      Verification strategy: FORWARD. Read each cited file,
+      find the employee row, report the actual values.
+
+  - role: verifier-reverse
+    role_type: auditor
+    prompt: >
+      Verification strategy: REVERSE. Start from the falsifiable_by
+      instruction. Actively try to disprove each claim.
+
+  - role: verifier-cross
+    role_type: auditor
+    prompt: >
+      Verification strategy: CROSS. Check values across ALL files
+      in the evidence index, not just the cited ones.
+
+rules:
+  max_rounds: 1
+  independent_positions: true
 ```
 
 Write your own compositions for your domain. Define the roles, assign capabilities, set the rules.
@@ -299,7 +360,7 @@ The engine tracks which factual claims were independently verified and which wer
 
 ## When to use it
 
-Architecture decisions are the obvious use case, but deliberation applies anywhere you'd want a second opinion before committing: **debugging** (force adversarial hypothesis testing instead of confirmation bias), **pre-merge review** (is the approach sound, not just the code), **incident post-mortems**, **migration strategy**, **dependency decisions**, **RFC review**, and more.
+Architecture decisions are the obvious use case, but deliberation applies anywhere you'd want a second opinion before committing: **debugging** (force adversarial hypothesis testing instead of confirmation bias), **code review** (catch what linters miss — wrong abstractions, maintainability traps, design system misuse), **forensic verification** (confirm that every factual claim in an investigation report actually matches the source files), **incident post-mortems**, **migration strategy**, **dependency decisions**, **RFC review**, and more.
 
 See **[docs/use-cases.md](docs/use-cases.md)** for the full range of scenarios with example commands.
 

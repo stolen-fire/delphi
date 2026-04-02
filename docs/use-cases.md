@@ -182,9 +182,9 @@ API contracts, integration specs, SLAs.
 
 ---
 
-## Lightweight vs. Standard Mode
+## Choosing the Right Mode
 
-### Use lightweight for everyday decisions
+### Use lightweight (`/delphi`) for everyday decisions
 
 Quick, 2-delegate deliberations that take seconds and catch the thing you'd realize in the shower later.
 
@@ -195,13 +195,88 @@ Quick, 2-delegate deliberations that take seconds and catch the thing you'd real
 /delphi "Is this error handling strategy sufficient?"
 ```
 
-### Use standard for multi-dimensional decisions
+### Use standard (`/delphi --config`) for multi-dimensional decisions
 
 Decisions with multiple stakeholders, dimensions, or where one dimension can veto.
 
 - Compositions with **domain-specific delegates** (DBA perspective, frontend perspective, ops perspective)
 - Decisions where **one dimension can veto** (security, compliance, domain invariants)
 - Decisions where **human deferral** matters — the plugin produces a structured deferral package instead of forcing a bad answer
+
+### Use code review (`/delphi-review`) for code quality
+
+When you want adversarial assessment of code — not "does it compile" but "is the approach sound, will it scale, does it follow the design system."
+
+- Pre-merge review of files or diffs
+- Convention compliance when you have a rules document
+- Maintainability assessment from the perspective of the next developer
+
+### Use forensic verification (`/delphi-audit`) for fact-checking
+
+When an investigation report makes factual claims about values in source files and you need to confirm those claims are ground truth before acting on them.
+
+- Payroll audit findings before reporting to stakeholders
+- Any forensic investigation where a model read files and reported values
+- Zero-tolerance domains where a single incorrect value has real consequences
+
+---
+
+## Code Review
+
+### Adversarial code review
+
+Not a linter — `/delphi-review` catches the things linters can't: wrong abstractions, maintainability traps, design system misuse, and architectural patterns that will cause pain six months from now.
+
+```
+/delphi-review src/components/Dashboard.tsx
+/delphi-review src/components/*.tsx --conventions RULES.md
+/delphi-review --diff HEAD~3
+```
+
+Three distinct perspectives examine the same code independently:
+- **Advocate** defends the implementation choices
+- **Critic** attacks the weakest patterns
+- **Maintainer** reads it as someone inheriting the codebase cold
+
+The output is a prioritized remediation plan, not a list of opinions.
+
+### Design system compliance
+
+When you have a conventions document, the Enforcer audits every component usage against it.
+
+```
+/delphi-review --conventions .docs/antd-v6-conventions.md src/components/*.tsx
+```
+
+---
+
+## Forensic Verification
+
+### Verifying audit findings
+
+When an investigation produces a report claiming "employee 53310 had premium $42.38 in the 02.06 file," did the model actually read that correctly, or did it hallucinate? `/delphi-audit` dispatches three independent verifiers to read the source files and confirm every factual claim.
+
+```
+/delphi-audit docs/investigations/2026-04-01-WholeLifeAudit-Findings.yaml
+```
+
+Three different verification strategies attack the same claims:
+
+- **Forward** reads the cited files and checks that values match
+- **Reverse** follows the `falsifiable_by` instructions and actively tries to disprove each claim
+- **Cross** checks values across all evidence files — not just the ones the audit cited — looking for gaps and inconsistencies
+
+### Zero-tolerance domains
+
+Forensic verification is designed for domains where factual accuracy is non-negotiable — payroll, compliance, financial audits, regulatory filings. A single hallucinated value can mean someone's paycheck is wrong.
+
+The consensus model is simple: if all three verifiers agree, the claim is confirmed. Any disagreement is escalated to the user — the engine never resolves factual disputes on its own.
+
+### Learning from discrepancies
+
+When discrepancies are resolved, the resolution is persisted to a feedback log. The next time a similar discrepancy appears, the engine suggests the prior resolution: "Last 4 times this pattern appeared, it was a manual reprocessing run outside the pipeline."
+
+Over time, the feedback log reveals which verification strategies catch the most real errors and which claim types have the highest discrepancy rates.
 
 ---
 
