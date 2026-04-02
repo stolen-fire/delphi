@@ -1,15 +1,6 @@
----
-name: code-review-deliberation
-description: >
-  Code review deliberation protocol reference. 3 default delegates (Advocate,
-  Critic, Maintainer) with sequential dispatch, conditional Enforcer when
-  conventions provided, and remediation plan output. Used by the main engine
-  when mode is code-review.
----
+# Code review deliberation protocol rules
 
-# Code review deliberation protocol
-
-This document defines the rules for code-review mode. The main engine skill reads this as a protocol reference.
+This document defines the rules for code-review mode. The engine reads this as a protocol reference during code review deliberations.
 
 ## Mode characteristics
 

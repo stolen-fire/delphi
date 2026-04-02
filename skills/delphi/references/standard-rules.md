@@ -1,15 +1,6 @@
----
-name: standard-deliberation
-description: >
-  Standard deliberation protocol reference. 3-5 delegates with parallel
-  position dispatch, anti-anchoring enforcement, Chair subagent for framing
-  and decision writing, adversarial challenges, synthesis, dissent, and
-  human deferral. Used by the main engine when mode is standard.
----
+# Standard deliberation protocol rules
 
-# Standard deliberation protocol
-
-This document defines the rules for standard mode. The main engine skill reads this as a protocol reference.
+This document defines the rules for standard mode. The engine reads this as a protocol reference during standard deliberations.
 
 ## Mode characteristics
 

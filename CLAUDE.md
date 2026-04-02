@@ -9,7 +9,7 @@ Claude Code plugin for structured multi-agent deliberation with adversarial revi
 ## Implementation Status
 
 - **Lightweight mode** (2 delegates, sequential): fully implemented and working
-- **Standard mode** (3-5 delegates, parallel dispatch): fully implemented and working — engine at `skills/delphi/SKILL.md` line 27 delegates to the standard protocol reference at `skills/standard-deliberation/SKILL.md`
+- **Standard mode** (3-5 delegates, parallel dispatch): fully implemented and working
 - **Code review mode** (3+1+1 delegates, sequential): fully implemented — `/delphi-review` command, lint pre-phase (auto-detect ESLint/Stylelint/Roslyn), Cartographer delegate (component replacement analysis), Advocate/Critic/Maintainer delegates, conditional Enforcer (fallback when no linter config), remediation plan output
 - **Tone system**: 5 built-in tones (snarky, diplomatic, adversarial, socratic, parliamentary), user-extensible via `.claude/delphi/tones/`
 - **Observatory** (`/delphi-observe`): browser-based viewer for deliberation dockets — issue-threaded layout with AI commentary, supports live and post-hoc modes via visualizer MCP
@@ -20,6 +20,7 @@ Claude Code plugin for structured multi-agent deliberation with adversarial revi
 
 ## Plugin Architecture
 
+- **Engine skill uses progressive disclosure**: `skills/delphi/SKILL.md` is a ~190-line routing core. Protocol-specific logic lives in `skills/delphi/protocols/` (one file per mode, read on demand). Shared references live in `skills/delphi/references/` (read during synthesis/finalization). Only the core + one protocol file loads per invocation.
 - `$CLAUDE_PLUGIN_ROOT` resolves all internal file references (templates, skill cross-refs)
 - Synthesis (Phase 4) is engine logic, NOT a subagent — the engine parses action markers mechanically
 - Action markers: `[ACTION: DEFEND]`, `[ACTION: CONCEDE]`, `[ACTION: DISSENT]`, `[ACTION: VETO]`, `[CITE: filename, section]` — case-insensitive, whitespace-flexible
