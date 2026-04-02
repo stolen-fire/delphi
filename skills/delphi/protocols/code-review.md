@@ -194,6 +194,8 @@ highway already goes.
 
 [TONE BLOCK]
 
+[MCP GROUNDING BLOCK]
+
 ## Review context
 {contents of proposition.md — contains review metadata, file list, full unabridged code, AND lint findings if available}
 
@@ -230,6 +232,36 @@ Dispatch a subagent with the assembled prompt. Use the `deliberation-cartographe
 
 Output progress: `  Cartographer analysis... done`
 
+### Step 1.3: MCP verification fetch (engine logic)
+
+Skip this step if no MCP grounding exists (no `mcp:` field in composition or MCP unavailable).
+
+Read `{docket-path}/challenges/round-1-cartographer.md`. Extract every component name that appears in:
+- Component replacements: the "Library equivalent" field
+- Variant corrections: the "Should be" field
+- Sub-component opportunities: the "Should be" field
+
+### Step 1.4: Diff against Phase A grounding
+
+Compare the Cartographer's recommended components against the components already covered in `{docket-path}/mcp-grounding.md`.
+
+**No gaps:** Output `  MCP grounding: complete (no verification gaps)` and proceed.
+
+**Gaps exist:** For each component the Cartographer recommends that is NOT in the grounding document, call the same MCP tools used in Phase A (Step 0.2c). Append the results to `{docket-path}/mcp-grounding.md` under a new section:
+
+```
+## Verification fetch — Cartographer recommendations
+
+### {ComponentName}
+**When to use:** {from info tool}
+**Props:** {from info tool}
+**Semantic keys:** {from semantic tool, if available}
+```
+
+Output: `  MCP grounding: {N} components added from Cartographer recommendations ({list})`
+
+This is one follow-up fetch, not a loop. The Advocate and subsequent delegates receive the updated grounding. The Cartographer itself does not — it already ran.
+
 ---
 
 ## Review Phase 2: Advocate position
@@ -255,6 +287,8 @@ assertions backed by evidence from the actual code.
 {/if}
 
 [TONE BLOCK]
+
+[MCP GROUNDING BLOCK]
 
 ## Review context
 {contents of proposition.md — contains review metadata, file list, AND full unabridged code}
@@ -316,6 +350,8 @@ You are the Critic in this code review. Your capability is challenge_all.
 {/if}
 
 [TONE BLOCK]
+
+[MCP GROUNDING BLOCK]
 
 ## Review context
 {contents of proposition.md — contains review metadata, file list, AND full unabridged code}
@@ -379,6 +415,8 @@ will inherit it in 6 months with no access to the original author.
 {/if}
 
 [TONE BLOCK]
+
+[MCP GROUNDING BLOCK]
 
 ## Review context
 {contents of proposition.md — contains review metadata, file list, AND full unabridged code}
@@ -449,6 +487,8 @@ You are the Enforcer in this code review. You audit code against conventions.
 
 [TONE BLOCK]
 
+[MCP GROUNDING BLOCK]
+
 ## Code under review
 
 {review_artifact content — FULL AND UNABRIDGED, every line of every file}
@@ -515,6 +555,8 @@ You are the Advocate. You are responding to adversarial challenges from
 the Cartographer, the Critic, and the Maintainer.
 
 [TONE BLOCK]
+
+[MCP GROUNDING BLOCK]
 
 ## Your original position
 {contents of positions/round-1/advocate.md}
