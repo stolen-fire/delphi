@@ -16,6 +16,7 @@ Claude Code plugin for structured multi-agent deliberation with adversarial revi
 - **Evidence pipeline**: evidence submission via `--evidence` flag or YAML `evidence:` field, PDF conversion (pdftotext + Tesseract), evidence index with provenance, SHA-256 hashing
 - **Capabilities**: `research_authority` (pre-deliberation case law appendix with verified absences, recovery window on concession), `verify_sources` (mid-deliberation auditor verification with four-category coverage map)
 - **Forensic verification mode** (3 verifiers, parallel dispatch): fully implemented — `/delphi-audit` command, Forward/Reverse/Cross verification strategies, consensus synthesis, dual output (verification report + findings annotation), discrepancy resolution feedback log
+- **Remediation executor** (`/delphi-remediate`): reads docket remediation plan, implements fixes sequentially, re-reviews with full `/delphi-review`, loops until clean or max iterations (default 3) — supports `--skip-optional` and `--dry-run`
 - **Chair evidence access**: Chair reads evidence directory, case law appendix, and verification log during proposition framing and decision writing
 
 ## Plugin Architecture
