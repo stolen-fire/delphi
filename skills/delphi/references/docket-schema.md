@@ -23,6 +23,13 @@ Both lightweight and standard protocols write `{docket-path}/docket.json` using 
       }
     ]
   },
+  "mcp_grounding": {
+    "server": "{MCP server name}",
+    "required": "{true | false}",
+    "available": "{true | false}",
+    "components": ["{list of components grounded from imports}"],
+    "tools_called": ["{list of MCP tool names actually invoked}"]
+  },
   "appendix": {
     "present": "{true | false}",
     "researcher": "{role_name}",
@@ -121,6 +128,14 @@ Code review mode uses a different docket.json structure:
     "errors": "{N}",
     "warnings": "{M}"
   },
+  "mcp_grounding": {
+    "server": "{MCP server name}",
+    "required": "{true | false}",
+    "available": "{true | false}",
+    "phase_a_components": ["{list of components grounded from imports}"],
+    "phase_b_components": ["{list of components added from Cartographer recommendations}"],
+    "tools_called": ["{list of MCP tool names actually invoked}"]
+  },
   "cartographer": {
     "replacements_proposed": "{N}",
     "variant_corrections": "{N}",
@@ -146,4 +161,4 @@ Code review mode uses a different docket.json structure:
 }
 ```
 
-**Omission rules:** Omit the `lint` block if no linter config was detected. Omit the `cartographer` block if the Cartographer did not run (e.g., composition overrides without a cartographer delegate).
+**Omission rules:** Omit the `lint` block if no linter config was detected. Omit the `cartographer` block if the Cartographer did not run (e.g., composition overrides without a cartographer delegate). Omit the `mcp_grounding` block if no `mcp:` field was present in the composition YAML. If MCP was configured but unavailable (`available: false`), include the block to record that the grounding was attempted but failed.
