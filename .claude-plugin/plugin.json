@@ -1,6 +1,6 @@
 {
   "name": "delphi",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Structured multi-agent deliberation with adversarial review, code review, docket provenance, and configurable compositions",
   "author": {
     "name": "stolen-fire"
