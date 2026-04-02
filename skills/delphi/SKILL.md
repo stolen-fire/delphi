@@ -50,6 +50,15 @@ When invoked, you receive either:
   - If `mode: code-review`: load tone if set, read and follow the **Code Review Protocol**
   - If `mode: standard` (or 3+ delegates): load tone if set, read and follow the **Standard Protocol** at `${CLAUDE_PLUGIN_ROOT}/skills/delphi/protocols/standard.md`
 
+### Step 0.1b: Parse MCP configuration
+
+If a composition YAML was provided, check for an `mcp:` field. If present, extract:
+- `mcp.required` — boolean. If `true`, the engine must successfully load and call at least one MCP tool during Step 0.2c or halt.
+- `mcp.server` — string. The MCP server name prefix used to resolve tool names (e.g., `antd` resolves `antd_info` to `mcp__antd__antd_info`).
+- `mcp.tools` — list of tool short names available from this server.
+
+If no `mcp:` field is present, skip MCP grounding entirely — no prefetch, no injection, no `[MCP GROUNDING BLOCK]` in dispatch prompts.
+
 ### Step 0.2: Create docket directory
 
 Generate a docket name using the format `{YYYYMMDD}-{HHmmss}-{name}` where:
@@ -133,6 +142,47 @@ Output progress: `  Evidence: {N} files processed ({born-digital} born-digital, 
 
 If no evidence path was provided, skip this entire section.
 
+### Step 0.2c: MCP grounding prefetch
+
+Skip this step if no `mcp:` field was parsed in Step 0.1b.
+
+**1. Load MCP tools.** Use ToolSearch to load the deferred MCP tools declared in the composition. Resolve each tool name using the server prefix: `mcp__{server}__{tool_name}` (e.g., `antd_info` → `mcp__antd__antd_info`). Load all tools in a single ToolSearch call: `select:mcp__{server}__{tool1},mcp__{server}__{tool2},...`
+
+If ToolSearch fails to resolve any tools:
+- If `mcp.required` is `true`: halt with `"MCP server '{server}' is required but unavailable. Cannot proceed."`
+- If `mcp.required` is `false`: output `  MCP: server '{server}' unavailable, proceeding without grounding` and skip the rest of this step.
+
+**2. Extract components from code under review.** Read each file in the review target paths (for code-review mode: `review_target.paths`; for other modes: input artifact files). Extract component names from import statements. For JavaScript/TypeScript, parse named imports: `import { Button, Card, Table } from '{library}'`. Deduplicate the list.
+
+**3. Call MCP tools for detected components.** For each detected component, call the MCP tools that provide component-level information. The engine decides which tools to call based on what's available:
+
+- If `{server}_info` is available: call `{server}_info(component, detail=true)` for each component
+- If `{server}_semantic` is available: call `{server}_semantic(component)` for each component
+- If `{server}_token` is available: call `{server}_token()` once for global tokens, and `{server}_token(component)` for components that commonly need theme overrides
+
+**4. Assemble grounding document.** Combine all MCP results into a single markdown document organized by component:
+
+```
+## MCP Component Reference
+
+### {ComponentName}
+**When to use:** {from info tool}
+**Props:** {from info tool}
+**Semantic keys (v6 styles/classNames):** {from semantic tool, if available}
+
+[repeat for each component]
+
+## Global Design Tokens
+{from token tool, if available}
+
+## Component Tokens: {ComponentName}
+{from token(component) tool, if available}
+```
+
+Write this document to `{docket-path}/mcp-grounding.md`.
+
+**5. Output progress.** `  MCP: {N} components grounded from {server} ({component list})`
+
 ### Step 0.3: Write proposition
 
 - **Lightweight inline:** Write the user's question directly to `proposition.md` in the docket directory. Frame it as a decidable question — if the user's input is vague, sharpen it into a specific proposition.
@@ -174,11 +224,22 @@ When a tone is loaded, inject this block into every dispatch prompt (all phases,
 
 All dispatch templates use the shorthand **[TONE BLOCK]** to indicate where this block goes.
 
+## MCP grounding injection pattern
+
+When MCP grounding was assembled in Step 0.2c, inject this block into every dispatch prompt (all phases, all protocols). When no MCP grounding exists (no `mcp:` field in composition, or server unavailable with `required: false`), omit entirely — do not include empty headers.
+
+```
+## Component Library Reference
+{contents of {docket-path}/mcp-grounding.md}
+```
+
+All dispatch templates use the shorthand **[MCP GROUNDING BLOCK]** to indicate where this block goes. Place it after `[TONE BLOCK]` in every dispatch template.
+
 ---
 
 ## Protocol routing
 
-After completing Phase 0 (initialization, docket creation, evidence preprocessing, proposition, tone loading), read the appropriate protocol file and follow it from its first phase:
+After completing Phase 0 (initialization, docket creation, evidence preprocessing, MCP grounding prefetch, proposition, tone loading), read the appropriate protocol file and follow it from its first phase:
 
 | Mode | Protocol file |
 |------|--------------|
