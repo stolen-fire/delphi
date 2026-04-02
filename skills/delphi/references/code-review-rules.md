@@ -127,3 +127,25 @@ When `--config` provides a YAML with `mode: code-review`:
 - Challenger delegates → challenge phase, output routed to participants
 - Auditor delegates → independent dispatch, report appended
 - Facilitator delegates → framing and decision (for compositions that include a Chair)
+
+## MCP grounding rules
+
+### Phase A: Deterministic prefetch
+
+The engine parses the composition YAML `mcp:` field during initialization. If present, it loads MCP tools via ToolSearch, extracts component names from the code under review's import statements, and calls MCP tools for each detected component. Results are assembled into `{docket-path}/mcp-grounding.md` and injected into all dispatch prompts via `[MCP GROUNDING BLOCK]`.
+
+**Required gate:** If `mcp.required` is `true` and the MCP server is unavailable, the engine halts. If `false` or omitted, the engine warns and proceeds without grounding.
+
+**Token budget:** Bounded by what the code imports. The engine does not fetch the full component catalog — only components detected in import statements.
+
+### Phase B: Verification fetch (code-review mode only)
+
+After the Cartographer dispatches, the engine reads the Cartographer's replacement proposals and identifies components recommended that were not in the Phase A prefetch. These are components the code *should* use but doesn't import — the Cartographer's highest-value findings.
+
+The engine fetches MCP data for these components and appends to `mcp-grounding.md`. This is a verification pipeline: the Cartographer asserts from training knowledge, the engine fetches authoritative documentation so the Advocate can evaluate the claim against real specs.
+
+**Bounded scope:** One follow-up fetch, not a loop. If the Advocate discovers further components during response, those are flagged as "unverified claim" in synthesis rather than triggering another fetch.
+
+### Delegate contract
+
+Delegates never call MCP tools. They receive grounding as text in their dispatch prompts. Agent tool lists remain `[Read, Write]`. The engine owns all MCP interaction. This keeps agents framework-agnostic — the same Cartographer works for antd, Blazor, Material UI, or any library the composition configures.
