@@ -90,7 +90,12 @@ This is ENGINE LOGIC — not a subagent dispatch. The engine auto-detects and ru
 | `.css`, `.module.css` | Stylelint | `stylelint.config.*`, `.stylelintrc.*` |
 | `.cs` | Roslyn Analyzers | `.editorconfig`, `Directory.Build.props`, `.globalconfig` |
 
-**2. Composition override:** If composition YAML sets `lint.enabled: false`, skip this step entirely.
+**2. Skip conditions:** Skip the lint pre-phase entirely if ANY of these are true:
+- The `skip_lint` parameter is `true` (from `--skip-lint` CLI flag or composition YAML `skip_lint: true` field)
+- Composition YAML sets `lint.enabled: false`
+
+When lint is skipped, output: `  Lint: skipped (upstream pipeline handled linting)`
+Set `enforcer_active` based on the composition's explicit `enforcer_active` field, or default to `true` if conventions are provided.
 
 **3. Run linters:** If configs found, run linters via Bash:
 
@@ -209,6 +214,19 @@ highway already goes.
 {contents of conventions file — FULL}
 {/if}
 
+{if upstream_report provided:}
+## Upstream analysis
+
+The following report was produced by an upstream pipeline agent (component-structure)
+that already analyzed this code for structural patterns, drift detection, size/complexity
+thresholds, and design system compliance. Use this to avoid re-scanning territory
+already covered. Focus your analysis on component SELECTION correctness, variant
+appropriateness, and sub-component opportunities — the areas this upstream report
+does not deeply evaluate.
+
+{contents of upstream_report file}
+{/if}
+
 ## Your task
 Read the code. For each functional block, ask: "What is this trying to do,
 and does the component library already do that?" Look for component
@@ -308,6 +326,15 @@ tool on the files in `code-under-review/` to verify line numbers. Your
 The Cartographer has identified component replacement proposals. Read them:
   Read: `{docket-path}/challenges/round-1-cartographer.md`
 You must address each Cartographer challenge in your position or response phase.
+{/if}
+
+{if upstream_report provided:}
+## Upstream analysis (component-structure)
+
+An upstream agent produced this structural analysis. You may cite its findings
+as evidence when defending implementation choices.
+
+{contents of upstream_report file}
 {/if}
 
 ## Output format
