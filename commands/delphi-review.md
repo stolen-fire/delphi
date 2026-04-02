@@ -1,7 +1,7 @@
 ---
 description: Adversarial code review with remediation plan output
 allowed-tools: Agent, Read, Write, Bash, Glob, Grep
-argument-hint: '<files|glob> [--diff [ref]] [--conventions path] [--config path.yml] [--tone name]'
+argument-hint: '<files|glob> [--diff [ref]] [--conventions path] [--config path.yml] [--tone name] [--skip-lint] [--upstream-report path]'
 ---
 
 # /delphi-review
@@ -20,6 +20,8 @@ If `$ARGUMENTS` contains file paths or glob patterns (anything not prefixed with
 - If `$ARGUMENTS` also contains `--conventions`, extract the path — this activates the Enforcer delegate
 - If `$ARGUMENTS` also contains `--config`, extract the path — this overrides the default delegate roster with a composition YAML
 - If `$ARGUMENTS` also contains `--tone`, extract the tone name
+- If `$ARGUMENTS` also contains `--skip-lint`, set `skip_lint = true` — this disables the lint pre-phase entirely (for use when an upstream pipeline has already run linting)
+- If `$ARGUMENTS` also contains `--upstream-report`, extract the path — this is a report from an upstream agent (e.g., component-structure) to inject as additional context for the Cartographer and Advocate
 
 **Diff review:**
 If `$ARGUMENTS` contains `--diff`:
@@ -27,7 +29,7 @@ If `$ARGUMENTS` contains `--diff`:
 - If no ref follows, run `git diff --staged` to capture staged changes
 - If the diff is empty, warn and exit: "No changes found. Stage changes with `git add` or provide a ref."
 - The review artifact is: the raw diff output + full content of each changed file (read via Read tool)
-- Other flags (`--conventions`, `--config`, `--tone`) work the same as file review
+- Other flags (`--conventions`, `--config`, `--tone`, `--skip-lint`, `--upstream-report`) work the same as file review
 
 **No arguments:**
 If `$ARGUMENTS` is empty, display usage help:
@@ -43,6 +45,8 @@ Usage:
   /delphi-review --conventions RULES.md src/*.tsx           With convention enforcement
   /delphi-review --config review.yml src/*.tsx              Custom composition
   /delphi-review --tone snarky src/Foo.tsx                  With tone
+  /delphi-review --skip-lint src/*.tsx                     Skip lint pre-phase
+  /delphi-review --upstream-report report.md src/*.tsx     Inject upstream agent report
 
 Docket output: .deliberation/dockets/{timestamp}-review-{slug}/
 Remediation plan: .deliberation/dockets/.../remediation/plan.md
@@ -90,5 +94,7 @@ Pass to the engine:
 - **conventions:** the conventions file path and contents (or null)
 - **composition:** the parsed YAML (or null — engine uses hardcoded defaults)
 - **tone:** the tone name (or null)
+- **skip_lint:** true if `--skip-lint` was provided or if composition YAML sets `skip_lint: true` (CLI flag overrides YAML)
+- **upstream_report:** file path and contents from `--upstream-report` (or null)
 
 The engine skill handles everything from here — docket creation, code snapshot, delegate dispatch, synthesis, remediation plan, and output.
