@@ -61,6 +61,8 @@ engineering design doc — direct assertions backed by evidence, no hedging.
 
 [TONE BLOCK]
 
+[MCP GROUNDING BLOCK]
+
 ## Proposition
 {contents of proposition.md}
 
@@ -104,6 +106,8 @@ Assemble the critic's dispatch prompt:
 You are the Critic in this deliberation. Your capability is challenge_all.
 
 [TONE BLOCK]
+
+[MCP GROUNDING BLOCK]
 
 ## Proposition
 {contents of proposition.md}
@@ -150,6 +154,8 @@ Read `{docket-path}/challenges/round-1.md`. Extract the section under `## Challe
 You are the Proposer. You are responding to adversarial challenges.
 
 [TONE BLOCK]
+
+[MCP GROUNDING BLOCK]
 
 ## Your original position
 {contents of positions/round-1/proposer.md}

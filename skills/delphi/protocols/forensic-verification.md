@@ -156,6 +156,8 @@ This index maps evidence IDs to filtered CSV file paths in the docket. Read the 
 
 [TONE BLOCK]
 
+[MCP GROUNDING BLOCK]
+
 ## CRITICAL: Write your output to this exact file path
 
 {docket-path}/verifier-reports/verifier-{strategy_name_lowercase}.md

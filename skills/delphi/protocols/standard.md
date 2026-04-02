@@ -81,6 +81,8 @@ You are the Chair. Frame the proposition for deliberation.
 
 [TONE BLOCK]
 
+[MCP GROUNDING BLOCK]
+
 ## Your task
 Restate the following question as a decidable proposition — one that forces
 delegates to take a clear position for or against. Identify the specific
@@ -122,6 +124,8 @@ You are the {role_name} conducting pre-deliberation legal/domain research.
 {delegate's prompt_register}
 
 [TONE BLOCK]
+
+[MCP GROUNDING BLOCK]
 
 ## Your task
 Research the legal and domain landscape relevant to this deliberation BEFORE
@@ -215,6 +219,8 @@ You are the {role_name} in this deliberation.
 
 [TONE BLOCK]
 
+[MCP GROUNDING BLOCK]
+
 ## Grounding material
 {contents of grounding file if specified, otherwise "none provided"}
 
@@ -267,6 +273,8 @@ every position.
 {delegate's prompt_register}
 
 [TONE BLOCK]
+
+[MCP GROUNDING BLOCK]
 
 ## Proposition
 {contents of proposition.md}
@@ -397,6 +405,8 @@ You are the {role_name}. You are responding to adversarial challenges.
 {delegate's prompt_register}
 
 [TONE BLOCK]
+
+[MCP GROUNDING BLOCK]
 
 ## Your original position
 {contents of positions/round-{N}/{role_name}.md}
@@ -549,6 +559,8 @@ You are the Chair. Write the ratified decision document.
 {Chair's prompt_register}
 
 [TONE BLOCK]
+
+[MCP GROUNDING BLOCK]
 
 ## Your task
 Read all deliberation materials and write decision.md — the authoritative
