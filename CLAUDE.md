@@ -15,6 +15,7 @@ Claude Code plugin for structured multi-agent deliberation with adversarial revi
 - **Observatory** (`/delphi-observe`): browser-based viewer for deliberation dockets — issue-threaded layout with AI commentary, supports live and post-hoc modes via visualizer MCP
 - **Evidence pipeline**: evidence submission via `--evidence` flag or YAML `evidence:` field, PDF conversion (pdftotext + Tesseract), evidence index with provenance, SHA-256 hashing
 - **Capabilities**: `research_authority` (pre-deliberation case law appendix with verified absences, recovery window on concession), `verify_sources` (mid-deliberation auditor verification with four-category coverage map)
+- **Forensic verification mode** (3 verifiers, parallel dispatch): fully implemented — `/delphi-audit` command, Forward/Reverse/Cross verification strategies, consensus synthesis, dual output (verification report + findings annotation), discrepancy resolution feedback log
 - **Chair evidence access**: Chair reads evidence directory, case law appendix, and verification log during proposition framing and decision writing
 
 ## Plugin Architecture
@@ -33,6 +34,9 @@ Claude Code plugin for structured multi-agent deliberation with adversarial revi
 - Lint pre-phase: engine auto-detects linter configs (ESLint, Stylelint, Roslyn), runs them, embeds findings in proposition. Lint replaces Enforcer as default convention checker.
 - Code review delegates: cartographer (challenger, blue, always), advocate (participant, green), critic (challenger, red, reused), maintainer (challenger, yellow), enforcer (auditor, magenta, conditional fallback when no lint config)
 - Remediation plan: engine-generated actionable output from synthesis + compliance findings, prioritized as critical/recommended/optional
+- Forensic verification delegates: verifier (auditor, blue, dispatched 3x with strategy injection — Forward/Reverse/Cross)
+- Forensic verification action markers: `[ACTION: CONFIRM]`, `[ACTION: DISPUTE]` — consensus-based synthesis, not argument evaluation
+- Discrepancy resolution feedback log: `.deliberation/forensic-verification-feedback.yaml` — project-level, accumulates across audits
 
 ## Conventions
 
