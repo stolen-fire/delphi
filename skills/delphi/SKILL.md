@@ -44,6 +44,7 @@ When invoked, you receive either:
 - If you received an inline question with no `--config`: use the **hardcoded lightweight composition** defined in `${CLAUDE_PLUGIN_ROOT}/skills/delphi/protocols/lightweight.md` (see "Default composition" section). If a `--tone` flag was provided, load the tone file using the tone loading rules below. Read and follow the **Lightweight Protocol** at `${CLAUDE_PLUGIN_ROOT}/skills/delphi/protocols/lightweight.md`.
 - If you received a `mode: code-review` signal (invoked from `/delphi-review`): if a `--tone` flag was provided, load the tone file. Read and follow the **Code Review Protocol** at `${CLAUDE_PLUGIN_ROOT}/skills/delphi/protocols/code-review.md`.
 - If you received a `mode: forensic-verification` signal (invoked from `/delphi-audit`): read and follow the **Forensic Verification Protocol** at `${CLAUDE_PLUGIN_ROOT}/skills/delphi/protocols/forensic-verification.md`.
+- If you received a `mode: assist` signal (invoked from `/delphi-assist`): if a `--tone` flag was provided, load the tone file. Read and follow the **Assist Protocol** at `${CLAUDE_PLUGIN_ROOT}/skills/delphi/protocols/assist.md`.
 - If you received a `--config` path: read the YAML file, extract `mode:` field
   - If a `--tone` flag was provided, it overrides any `tone` field in the composition YAML
   - If `mode: lightweight` (or 2 delegates): load tone if set, read and follow the **Lightweight Protocol**
@@ -247,5 +248,6 @@ After completing Phase 0 (initialization, docket creation, evidence preprocessin
 | `standard` | `${CLAUDE_PLUGIN_ROOT}/skills/delphi/protocols/standard.md` |
 | `code-review` | `${CLAUDE_PLUGIN_ROOT}/skills/delphi/protocols/code-review.md` |
 | `forensic-verification` | `${CLAUDE_PLUGIN_ROOT}/skills/delphi/protocols/forensic-verification.md` |
+| `assist` | `${CLAUDE_PLUGIN_ROOT}/skills/delphi/protocols/assist.md` |
 
 The protocol file contains all phase-by-phase dispatch instructions, templates, synthesis logic, and docket finalization for that mode. It will reference shared files in `references/` as needed — read those when the protocol instructs you to.
