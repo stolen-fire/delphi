@@ -129,6 +129,16 @@ Create a tailored deliberation panel through a guided interview:
 
 The command asks about your decision, what's at risk, and any context files — then proposes a panel of delegates, generates the composition YAML, and optionally runs the deliberation immediately.
 
+### Execute a remediation plan
+
+After a code review, automatically implement all fixes and verify with a re-review:
+
+```
+/delphi-remediate .deliberation/dockets/20260401-221710-review-dashboard-tsx
+```
+
+See [Remediation](#remediation) below for the full workflow.
+
 ---
 
 ## Four modes
@@ -209,6 +219,37 @@ Adversarial fact-checking for forensic audit findings. When an investigation pro
 - Discrepancy resolution feedback log that accumulates across audits — prior patterns are surfaced as suggestions when similar discrepancies appear
 
 Designed for zero-tolerance domains where factual accuracy is non-negotiable.
+
+### Remediation
+
+Closed-loop fix-and-verify workflow for code review findings. `/delphi-remediate` reads a code review docket's remediation plan, implements every fix, then runs a full `/delphi-review` on the modified files. If the re-review surfaces new findings, it loops — fix and re-review until clean or the iteration limit is reached.
+
+```
+/delphi-remediate .deliberation/dockets/20260401-221710-review-dashboard-tsx
+/delphi-remediate .deliberation/dockets/20260401-221710-review-dashboard-tsx --skip-optional
+/delphi-remediate .deliberation/dockets/20260401-221710-review-dashboard-tsx --max-iterations 5
+/delphi-remediate .deliberation/dockets/20260401-221710-review-dashboard-tsx --dry-run
+```
+
+**How it works:**
+
+1. **Parse** — reads `docket.json` and `remediation/plan.md` from the docket directory, extracts every item with its priority tier (critical / recommended / optional), target file, and fix action
+2. **Fix** — walks items in priority order (critical first), reads each file's current state, implements the fix via targeted edits. Items already resolved by prior fixes are skipped automatically
+3. **Re-review** — runs a full adversarial code review on the same files with the same parameters (composition, conventions, tone). A new docket is created for the re-review
+4. **Evaluate** — if the re-review is clean, done. If findings remain and iterations are left, loops back to step 1 with the new remediation plan
+
+**Options:**
+
+- `--max-iterations N` — safety valve for the fix-review loop (default: 3)
+- `--skip-optional` — fix only critical and recommended items, skip the optional tier
+- `--dry-run` — parse and display the plan without modifying any files
+
+**Design choices:**
+
+- Each re-review is a full adversarial review from scratch — no shortcuts, no partial checks
+- Each iteration creates a new docket. The chain of dockets is the audit trail
+- The command does not commit — you review the changes and commit when satisfied
+- Line numbers from the original review are never trusted after edits; fixes locate code by content matching
 
 ---
 
